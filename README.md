@@ -1,14 +1,13 @@
 # html2docx
 
 Turn any HTML page into a KDP-ready Microsoft Word (`.docx`) manuscript — in a single, self-contained HTML file that runs entirely in your browser.
-
 ---
+
 html2docx faithfully reflects your HTML tags and CSS (including your page's
 **print styles**) into a clean, properly-styled DOCX, and exports the figures in
 your page as self-contained SVG/PNG. Nothing is uploaded — all conversion happens
 locally in your browser.
 
----
 
 ## ✨ Why html2docx
 
