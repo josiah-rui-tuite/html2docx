@@ -35,15 +35,14 @@ locally in your browser.
   reproduced as shaded DOCX blocks (with an adjustable lightness threshold).
 - **Code blocks that survive** — `<pre>` line breaks are preserved as real line
   breaks (not collapsed onto one line), in a monospace, shaded style.
-- **Book sizes & units** — KDP trim sizes plus common book sizes (A6/文庫, A5, A4,
-  B6, B5/JIS, 新書, 四六判, 菊判), with an **inch ⇄ mm** unit switch, per-edge
+- **Book sizes & units** — KDP trim sizes plus common book sizes, with an **inch ⇄ mm** unit switch, per-edge
   margins and a binding gutter.
 - **Japanese-first typography** — default body/heading font is **游ゴシック (Yu
   Gothic)**, applied with full East-Asian font mapping so Japanese renders
   correctly (configurable to any font).
 - **Live progress** — a progress bar with elapsed seconds and an estimate, so long
   conversions never feel stuck.
-- **Trilingual UI** — English (default), 日本語, 中文. Your choice is remembered.
+- **Trilingual UI** — English (default), Japanese, 中文. Your choice is remembered.
 
 ---
 
