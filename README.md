@@ -53,7 +53,7 @@ locally in your browser.
 
 or
 
-Visit the [GitHub Pages version](https://josiah-rui-tuite.github.io/markdown-editor/)
+Visit the [GitHub Pages version](https://josiah-rui-tuite.github.io/html2docx/)
 
 
 2. Open it in a modern browser (Chrome, Edge, Firefox, Safari).
