@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KDP Maker — HTML → DOCX</title>
+<!-- CDN: docx.js（DOCX 生成） / JSZip（SVG/PNG zip 出力） -->
+<script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+<script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Noto Sans JP", "Noto Sans SC", sans-serif;
+    margin: 0; padding: 0; line-height: 1.6;
+    background: #f5f6f8; color: #1a1a1a;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #16181d; color: #e6e6e6; }
+    .card { background: #21242b !important; border-color: #333 !important; }
+    input, select { background: #16181d; color: #e6e6e6; border-color: #444; }
+    .log { background: #0e0f12 !important; }
+    fieldset { border-color: #3a3d44 !important; }
+    .lang-popup { background: #21242b; border-color: #3a3d44; }
+    .lang-item { color: #e6e6e6; }
+    .lang-item:hover { background: #2c3040; }
+  }
+  header {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: #fff; padding: 18px 24px;
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+  }
+  header h1 { margin: 0; font-size: 1.35rem; }
+  header p { margin: 4px 0 0; opacity: .85; font-size: .85rem; max-width: 640px; }
+  main { max-width: 920px; margin: 0 auto; padding: 20px 16px 60px; }
+  .card {
+    background: #fff; border: 1px solid #e2e4e9; border-radius: 12px;
+    padding: 18px 20px; margin-bottom: 18px;
+  }
+  .card h2 { margin: 0 0 12px; font-size: 1rem; }
+  fieldset { border: 1px solid #e2e4e9; border-radius: 8px; margin: 0 0 12px; padding: 12px 14px; }
+  legend { font-size: .82rem; font-weight: 600; padding: 0 6px; opacity: .8; }
+  label.row { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: .9rem; flex-wrap: wrap; }
+  input[type="number"] { width: 72px; padding: 4px 6px; border: 1px solid #ccc; border-radius: 6px; }
+  select { padding: 5px 8px; border: 1px solid #ccc; border-radius: 6px; }
+  input[type="file"] { font-size: .9rem; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+    border: none; border-radius: 8px; padding: 10px 18px; font-size: .92rem; font-weight: 600;
+    background: #4f46e5; color: #fff; transition: filter .15s;
+  }
+  .btn:hover:not(:disabled) { filter: brightness(1.08); }
+  .btn.secondary { background: #6b7280; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+  .log {
+    background: #0e0f12; color: #cfe8cf; border-radius: 8px; padding: 12px 14px;
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: .8rem;
+    white-space: pre-wrap; max-height: 240px; overflow: auto; margin: 0;
+  }
+  .log .err { color: #ff8a8a; }
+  .log .warn { color: #ffd27a; }
+  .log .ok { color: #8ce99a; }
+  .muted { opacity: .7; font-size: .82rem; }
+  #preview {
+    border: 1px solid #e2e4e9; border-radius: 8px; background: #fff; color: #000;
+    max-height: 300px; overflow: auto; padding: 10px; margin-top: 8px;
+  }
+  code { font-family: ui-monospace, Consolas, monospace; }
+  .progbar { height: 10px; background: #e2e4e9; border-radius: 6px; overflow: hidden; }
+  #progBar { height: 100%; width: 0%; background: linear-gradient(90deg, #4f46e5, #7c3aed); transition: width .2s ease; }
+  @media (prefers-color-scheme: dark) { .progbar { background: #3a3d44; } }
+  /* Language switcher */
+  .lang-wrap { position: relative; flex-shrink: 0; }
+  .lang-toggle {
+    background: rgba(255,255,255,.18); border: none; color: #fff; cursor: pointer;
+    height: 38px; padding: 0 14px; border-radius: 19px; font-size: .85rem; font-weight: 600;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .lang-toggle:hover { background: rgba(255,255,255,.3); }
+  .lang-popup {
+    position: absolute; top: 100%; right: 0; margin-top: 8px;
+    background: #fff; border: 1px solid #e2e4e9; border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.18); padding: 12px; min-width: 180px;
+    opacity: 0; visibility: hidden; transform: translateY(-8px); transition: all .18s ease; z-index: 50;
+  }
+  .lang-popup.open { opacity: 1; visibility: visible; transform: translateY(0); }
+  .lang-popup-title { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; opacity: .6; margin-bottom: 10px; color: #333; }
+  .lang-list { display: flex; flex-direction: column; gap: 4px; }
+  .lang-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; cursor: pointer; color: #1a1a1a; }
+  .lang-item:hover { background: #eef0f6; }
+  .lang-item.active { background: #4f46e5; color: #fff; }
+  .lang-item-flag { font-size: 1.15rem; }
+  .lang-item-name { font-size: .9rem; font-weight: 500; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1 data-i18n="appTitle">KDP Maker</h1>
+    <p data-i18n="appSubtitle">Convert any HTML into a KDP-ready DOCX / export SVG images as PNG &amp; SVG. Single file, runs entirely in your browser.</p>
+  </div>
+  <div class="lang-wrap">
+    <button class="lang-toggle" id="langToggle" data-i18n-title="language" title="Language">
+      <span id="langFlag">🇺🇸</span> <span id="langCode">EN</span> ▾
+    </button>
+    <div class="lang-popup" id="langPopup">
+      <div class="lang-popup-title" data-i18n="language">Language</div>
+      <div class="lang-list">
+        <div class="lang-item active" data-lang="en"><span class="lang-item-flag">🇺🇸</span><span class="lang-item-name">English</span></div>
+        <div class="lang-item" data-lang="ja"><span class="lang-item-flag">🇯🇵</span><span class="lang-item-name">日本語</span></div>
+        <div class="lang-item" data-lang="zh"><span class="lang-item-flag">🇨🇳</span><span class="lang-item-name">中文</span></div>
+      </div>
+    </div>
+  </div>
+</header>
+<main>
+  <div class="card">
+    <h2 data-i18n="s1Title">1. Input HTML</h2>
+    <div class="row">
+      <input type="file" id="fileInput" accept=".html,.htm,text/html" hidden>
+      <button type="button" class="btn secondary" id="fileBtn" data-i18n="chooseFile">Choose HTML file</button>
+      <span class="muted" id="fileName" data-i18n="noFileChosen">No file selected</span>
+    </div>
+    <p class="muted" id="fileInfo" data-i18n="fileHint">Select an HTML file.</p>
+    <details>
+      <summary class="muted" style="cursor:pointer" data-i18n="previewSummary">Preview (live render of the loaded HTML)</summary>
+      <div id="preview"></div>
+    </details>
+  </div>
+
+  <div class="card">
+    <h2 data-i18n="s2Title">2. Settings</h2>
+    <fieldset>
+      <legend data-i18n="legendSvg">SVG image export format</legend>
+      <label class="row"><input type="checkbox" id="expSvg" checked> <span data-i18n="optSvg">SVG (vector original)</span></label>
+      <label class="row"><input type="checkbox" id="expPng" checked> <span data-i18n="optPng">PNG (raster)</span></label>
+      <label class="row"><span data-i18n="pngScaleLabel">PNG resolution scale</span>
+        <input type="number" id="pngScale" value="2" min="1" max="8" step="1"> ×
+        <span class="muted" data-i18n="pngScaleNote">(1× = display size. KDP recommends ~300dpi → 2–3× is a good target)</span>
+      </label>
+    </fieldset>
+    <fieldset>
+      <legend data-i18n="legendDocx">DOCX conversion</legend>
+      <label class="row"><input type="checkbox" id="printMode" checked> <span data-i18n="printModeLabel">Apply the page's print styles (@media print) — recommended for KDP</span></label>
+      <label class="row"><input type="checkbox" id="embedImages" checked> <span data-i18n="embedImagesLabel">Embed images in DOCX (as PNG)</span></label>
+      <label class="row"><input type="checkbox" id="h1PageBreak" checked> <span data-i18n="h1PageBreakLabel">Page break before h1 (KDP chapter break)</span></label>
+      <label class="row"><input type="checkbox" id="forceContrast" checked> <span data-i18n="contrastLabel">Body text black for contrast (white background)</span></label>
+      <label class="row"><input type="checkbox" id="figContrast" checked> <span data-i18n="figContrastLabel">Fix low-contrast colors in figures</span></label>
+      <label class="row"><input type="checkbox" id="calloutBg" checked> <span data-i18n="calloutBgLabel">Keep colored-background blocks (columns/callouts)</span></label>
+      <label class="row" id="calloutThreshRow"><span data-i18n="calloutThreshLabel">Background lightness threshold</span>
+        <input type="number" id="calloutThresh" value="0.93" min="0.5" max="1" step="0.01">
+        <span class="muted" data-i18n="calloutThreshNote">(relative luminance 0–1; backgrounds lighter than this are treated as plain. Higher = shade paler colors too)</span>
+      </label>
+      <label class="row"><span data-i18n="maxImgWLabel">Max image width</span>
+        <input type="number" id="maxImgW" value="500" min="100" max="1200" step="10"> px
+      </label>
+    </fieldset>
+    <fieldset>
+      <legend data-i18n="legendTrim">Trim size &amp; page (DOCX page setup)</legend>
+      <label class="row"><span data-i18n="unitLabel">Unit</span>
+        <select id="unitSel">
+          <option value="in" selected>inch</option>
+          <option value="mm">mm</option>
+        </select>
+      </label>
+      <label class="row"><span data-i18n="trimSizeLabel">Trim size</span>
+        <select id="trimSize">
+          <optgroup label="KDP (inch)">
+            <option data-w="5" data-h="8">5 × 8 in</option>
+            <option data-w="5.25" data-h="8">5.25 × 8 in</option>
+            <option data-w="5.5" data-h="8.5">5.5 × 8.5 in</option>
+            <option data-w="6" data-h="9" selected data-i18n="trim6x9">6 × 9 in (default)</option>
+            <option data-w="6.14" data-h="9.21">6.14 × 9.21 in</option>
+            <option data-w="7" data-h="10">7 × 10 in</option>
+            <option data-w="7.5" data-h="9.25">7.5 × 9.25 in</option>
+            <option data-w="8" data-h="10">8 × 10 in</option>
+            <option data-w="8.5" data-h="11" data-i18n="trim85">8.5 × 11 in (Letter)</option>
+          </optgroup>
+          <optgroup label="ISO / JIS (mm)">
+            <option data-w="4.1339" data-h="5.8268">A6 / 文庫 (105 × 148 mm)</option>
+            <option data-w="5.8268" data-h="8.2677">A5 (148 × 210 mm)</option>
+            <option data-w="8.2677" data-h="11.6929">A4 (210 × 297 mm)</option>
+            <option data-w="5.0394" data-h="7.1654">B6 (128 × 182 mm)</option>
+            <option data-w="7.1654" data-h="10.1181">B5 / JIS (182 × 257 mm)</option>
+          </optgroup>
+          <optgroup label="Japanese book (mm)">
+            <option data-w="4.0551" data-h="7.1654">Shinsho 新書 (103 × 182 mm)</option>
+            <option data-w="5.0000" data-h="7.4016">Shirokuban 四六判 (127 × 188 mm)</option>
+            <option data-w="5.1575" data-h="7.1654">Kikuban 菊判 (131 × 182 mm)</option>
+          </optgroup>
+          <option data-w="" data-h="" value="none" data-i18n="trimNone">Don't set (Word default)</option>
+          <option data-w="custom" data-h="custom" value="custom" data-i18n="trimCustom">Custom…</option>
+        </select>
+      </label>
+      <label class="row" id="customTrimRow" style="display:none"><span data-i18n="customTrimLabel">Custom size (W × H)</span>
+        <input type="number" id="trimW" value="6" min="1" max="500" step="0.01"> ×
+        <input type="number" id="trimH" value="9" min="1" max="500" step="0.01"> <span class="unit-label">in</span>
+      </label>
+      <label class="row"><span data-i18n="marginsLabel">Margins (top / bottom / inside / outside)</span>
+        <input type="number" id="mTop" value="0.75" min="0" max="100" step="0.05">
+        <input type="number" id="mBottom" value="0.75" min="0" max="100" step="0.05">
+        <input type="number" id="mInside" value="0.75" min="0" max="100" step="0.05">
+        <input type="number" id="mOutside" value="0.5" min="0" max="100" step="0.05"> <span class="unit-label">in</span>
+      </label>
+      <label class="row"><span data-i18n="gutterLabel">Gutter (binding)</span>
+        <input type="number" id="mGutter" value="0" min="0" max="50" step="0.05"> <span class="unit-label">in</span>
+        <span class="muted" data-i18n="gutterNote">(more pages → wider inside. ≤150p is safe with inside 0.75in / ~19mm)</span>
+      </label>
+      <label class="row"><span data-i18n="baseFontLabel">Base font (body & headings)</span>
+        <input type="text" id="baseFont" value="游ゴシック" style="width:160px; padding:4px 6px; border:1px solid #ccc; border-radius:6px;">
+      </label>
+    </fieldset>
+  </div>
+
+  <div class="card">
+    <h2 data-i18n="s3Title">3. Run</h2>
+    <div class="btns">
+      <button class="btn" id="btnDocx" disabled data-i18n="btnDocx">Convert &amp; download DOCX</button>
+      <button class="btn secondary" id="btnSvg" disabled data-i18n="btnSvg">Export SVG images (zip)</button>
+    </div>
+    <div id="progWrap" style="display:none; margin-top:14px;">
+      <div class="progbar"><div id="progBar"></div></div>
+      <p class="muted" id="progText" style="margin:6px 0 0; font-variant-numeric: tabular-nums;"></p>
+    </div>
+    <p class="muted" data-i18n="clientNote">※ All conversion runs in your browser (files are never sent to a server).</p>
+  </div>
+
+  <div class="card">
+    <h2 data-i18n="logTitle">Log</h2>
+    <pre class="log" id="log" data-i18n="waiting">Waiting…</pre>
+  </div>
+</main>
+
+<!-- 入力 HTML を実レンダリングして computed style を得るための隠し iframe -->
+<iframe id="stage" style="position:fixed; left:-9999px; top:0; width:800px; height:1000px; border:0;" aria-hidden="true"></iframe>
+
+<script>
+"use strict";
+(function () {
+  // ================= i18n =================
+  const TR = {
+    en: {
+      appTitle: "KDP Maker",
+      appSubtitle: "Convert any HTML into a KDP-ready DOCX / export SVG images as PNG & SVG. Single file, runs entirely in your browser.",
+      language: "Language",
+      s1Title: "1. Input HTML",
+      chooseFile: "Choose HTML file",
+      noFileChosen: "No file selected",
+      fileHint: "Select an HTML file.",
+      previewSummary: "Preview (live render of the loaded HTML)",
+      s2Title: "2. Settings",
+      legendSvg: "SVG image export format",
+      optSvg: "SVG (vector original)",
+      optPng: "PNG (raster)",
+      pngScaleLabel: "PNG resolution scale",
+      pngScaleNote: "(1× = display size. KDP recommends ~300dpi → 2–3× is a good target)",
+      legendDocx: "DOCX conversion",
+      printModeLabel: "Apply the page's print styles (@media print) — recommended for KDP",
+      embedImagesLabel: "Embed images in DOCX (as PNG)",
+      h1PageBreakLabel: "Page break before h1 (KDP chapter break)",
+      contrastLabel: "Body text black for contrast (white background)",
+      figContrastLabel: "Fix low-contrast colors in figures",
+      calloutBgLabel: "Keep colored-background blocks (columns/callouts)",
+      calloutThreshLabel: "Background lightness threshold",
+      calloutThreshNote: "(relative luminance 0–1; backgrounds lighter than this are treated as plain. Higher = shade paler colors too)",
+      maxImgWLabel: "Max image width",
+      legendTrim: "Trim size & page (DOCX page setup)",
+      unitLabel: "Unit",
+      baseFontLabel: "Base font (body & headings)",
+      trimSizeLabel: "Trim size",
+      trim6x9: "6 × 9 in (default)",
+      trim85: "8.5 × 11 in (Letter)",
+      trimNone: "Don't set (Word default)",
+      trimCustom: "Custom…",
+      customTrimLabel: "Custom size (W × H)",
+      unitIn: "in",
+      marginsLabel: "Margins (top / bottom / inside / outside)",
+      gutterLabel: "Gutter (binding)",
+      gutterNote: "(more pages → wider inside. ≤150p is safe with inside 0.75)",
+      s3Title: "3. Run",
+      btnDocx: "Convert & download DOCX",
+      btnSvg: "Export SVG images (zip)",
+      clientNote: "※ All conversion runs in your browser (files are never sent to a server).",
+      logTitle: "Log",
+      waiting: "Waiting…",
+      // log messages
+      libOk: "Libraries loaded (docx.js / JSZip). Please select an HTML file.",
+      libFail: "Failed to load CDN libraries (docx / JSZip). Check your network connection.",
+      fileReadFail: "File read failed: {msg}",
+      fileInfo: "{name} loaded (img: {img} / svg: {svg})",
+      loadDone: "Loaded: {name} (img {img} / svg {svg})",
+      noSvgExport: "SVG export is disabled because there are no SVG elements.",
+      selectFormat: "Select at least one export format.",
+      svgStart: "SVG export started ({n} items / SVG:{svg} PNG:{png} ×{scale})…",
+      itemErr: "  {base}: {msg}",
+      noExportable: "No exportable images.",
+      svgDone: "SVG export complete ({ok}/{total}) → svg_export.zip",
+      noSvg: "No SVG.",
+      docxFatal: "Fatal error during DOCX conversion: {msg}",
+      docxStart: "DOCX conversion started…",
+      svgEmbedFail: "  SVG embed failed: {msg}",
+      imgEmbedFail: "  Image embed failed (CORS etc.): {msg}",
+      imgClamp: "Max image width adjusted to content width {w}px.",
+      noBody: "(No body text could be extracted)",
+      genDone: "Generated {n} paragraphs/tables. Packaging…",
+      docxDone: "DOCX conversion complete → kdp_output.docx",
+      trimNoneLog: "Trim size: using Word default.",
+      trimLog: "Trim: {w} × {h} {u} / margins T{t} B{b} I{i} O{o} G{g} {u}",
+      contrastAdjusted: "{n} text color(s) darkened to black for contrast.",
+      figAdjusted: "{n} figure color(s) adjusted for contrast.",
+      printApplied: "Applied print-mode styles ({n} rules).",
+      progEstimate: "Estimated ~{sec}s (images: {n}).",
+      progPrep: "Preparing…",
+      progImages: "Converting images {i}/{n}…",
+      progBuild: "Building document…",
+      progPackage: "Packaging DOCX…",
+      progSvg: "Exporting figure {i}/{n}…",
+      progZip: "Zipping…",
+      progDone: "Done",
+      imgPlaceholder: "[image{alt}]",
+      imgFailPlaceholder: "[image could not be embedded{reason}]",
+      noBodyExtract: "(No body text could be extracted)",
+    },
+    ja: {
+      appTitle: "KDP Maker",
+      appSubtitle: "任意の HTML を KDP 対応 DOCX へ変換 ／ SVG 画像を PNG・SVG で Export。単一ファイル・完全ブラウザ内動作。",
+      language: "言語",
+      s1Title: "1. 入力 HTML",
+      chooseFile: "HTML ファイルを選択",
+      noFileChosen: "ファイル未選択",
+      fileHint: "HTML ファイルを選択してください。",
+      previewSummary: "プレビュー（読み込んだ HTML の実レンダリング）",
+      s2Title: "2. 設定",
+      legendSvg: "SVG 画像の Export 形式",
+      optSvg: "SVG（ベクター原本）",
+      optPng: "PNG（ラスタ）",
+      pngScaleLabel: "PNG 解像度倍率",
+      pngScaleNote: "（1倍=表示サイズ。KDP は 300dpi 相当を推奨 → 2〜3倍目安）",
+      legendDocx: "DOCX 変換",
+      printModeLabel: "ページの印刷スタイル(@media print)を適用（KDP 推奨）",
+      embedImagesLabel: "画像を DOCX に埋め込む（PNG 化）",
+      h1PageBreakLabel: "h1 の前で改ページ（KDP 章区切り）",
+      contrastLabel: "本文を黒基調にする（白背景コントラスト）",
+      figContrastLabel: "図の低コントラスト色を補正する",
+      calloutBgLabel: "背景色付きブロック（コラム）を反映する",
+      calloutThreshLabel: "コラム背景の明るさ閾値",
+      calloutThreshNote: "（相対輝度 0〜1。これより明るい背景は無地扱い。大きいほど淡い色も反映）",
+      maxImgWLabel: "画像の最大幅",
+      legendTrim: "判型・版面（DOCX のページ設定）",
+      unitLabel: "単位",
+      baseFontLabel: "基本フォント（本文・見出し）",
+      trimSizeLabel: "判型（トリムサイズ）",
+      trim6x9: "6 × 9 in（既定）",
+      trim85: "8.5 × 11 in（レター相当）",
+      trimNone: "設定しない（Word 既定）",
+      trimCustom: "カスタム…",
+      customTrimLabel: "カスタム寸法（幅 × 高さ）",
+      unitIn: "in",
+      marginsLabel: "マージン（上 / 下 / 内 / 外）",
+      gutterLabel: "綴じしろ（gutter）",
+      gutterNote: "（ページ数が多いほど内側を広めに。〜150p は内0.75で安全）",
+      s3Title: "3. 実行",
+      btnDocx: "DOCX に変換してダウンロード",
+      btnSvg: "SVG 画像を Export（zip）",
+      clientNote: "※ 変換は全てブラウザ内で完結します（ファイルはサーバに送信されません）。",
+      logTitle: "ログ",
+      waiting: "待機中…",
+      libOk: "ライブラリ読込 OK（docx.js / JSZip）。HTML を選択してください。",
+      libFail: "CDN ライブラリの読み込みに失敗しました（docx / JSZip）。ネットワーク接続を確認してください。",
+      fileReadFail: "ファイル読み込み失敗: {msg}",
+      fileInfo: "{name} を読み込み（img: {img} / svg: {svg}）",
+      loadDone: "読込完了: {name}（img {img} / svg {svg}）",
+      noSvgExport: "SVG 要素が無いため SVG Export は無効です。",
+      selectFormat: "Export 形式を1つ以上選択してください。",
+      svgStart: "SVG Export 開始（{n} 件 / SVG:{svg} PNG:{png} ×{scale}）…",
+      itemErr: "  {base}: {msg}",
+      noExportable: "Export できる画像がありませんでした。",
+      svgDone: "SVG Export 完了（{ok}/{total} 件）→ svg_export.zip",
+      noSvg: "SVG がありません。",
+      docxFatal: "DOCX 変換で致命的エラー: {msg}",
+      docxStart: "DOCX 変換開始…",
+      svgEmbedFail: "  SVG 埋め込み失敗: {msg}",
+      imgEmbedFail: "  画像埋め込み失敗（CORS 等）: {msg}",
+      imgClamp: "画像最大幅を版面内容幅 {w}px に調整。",
+      noBody: "（本文が抽出できませんでした）",
+      genDone: "段落/表 {n} 件を生成。パッケージング中…",
+      docxDone: "DOCX 変換完了 → kdp_output.docx",
+      trimNoneLog: "判型: Word 既定を使用。",
+      trimLog: "判型: {w} × {h} {u} / マージン 上{t} 下{b} 内{i} 外{o} 綴{g} {u}",
+      contrastAdjusted: "本文の文字色 {n} 箇所を黒に補正（コントラスト）。",
+      figAdjusted: "図の色 {n} 箇所をコントラスト補正。",
+      printApplied: "印刷モードのスタイルを適用（{n} ルール）。",
+      progEstimate: "目安 〜{sec}秒（画像: {n} 枚）。",
+      progPrep: "準備中…",
+      progImages: "画像を変換中 {i}/{n}…",
+      progBuild: "文書を構築中…",
+      progPackage: "DOCX をパッケージング中…",
+      progSvg: "図を書き出し中 {i}/{n}…",
+      progZip: "zip 圧縮中…",
+      progDone: "完了",
+      imgPlaceholder: "[画像{alt}]",
+      imgFailPlaceholder: "[画像を埋め込めませんでした{reason}]",
+      noBodyExtract: "（本文が抽出できませんでした）",
+    },
+    zh: {
+      appTitle: "KDP Maker",
+      appSubtitle: "将任意 HTML 转换为 KDP 适用的 DOCX ／ 将 SVG 图像导出为 PNG 和 SVG。单文件，完全在浏览器中运行。",
+      language: "语言",
+      s1Title: "1. 输入 HTML",
+      chooseFile: "选择 HTML 文件",
+      noFileChosen: "未选择文件",
+      fileHint: "请选择一个 HTML 文件。",
+      previewSummary: "预览（已加载 HTML 的实时渲染）",
+      s2Title: "2. 设置",
+      legendSvg: "SVG 图像导出格式",
+      optSvg: "SVG（矢量原稿）",
+      optPng: "PNG（位图）",
+      pngScaleLabel: "PNG 分辨率倍率",
+      pngScaleNote: "（1倍=显示尺寸。KDP 推荐约 300dpi → 建议 2〜3 倍）",
+      legendDocx: "DOCX 转换",
+      printModeLabel: "应用页面的打印样式(@media print)（KDP 推荐）",
+      embedImagesLabel: "将图像嵌入 DOCX（转为 PNG）",
+      h1PageBreakLabel: "在 h1 前分页（KDP 章节分隔）",
+      contrastLabel: "正文使用黑色以保证对比度（白色背景）",
+      figContrastLabel: "修正图中低对比度的颜色",
+      calloutBgLabel: "保留带背景色的区块（专栏）",
+      calloutThreshLabel: "专栏背景亮度阈值",
+      calloutThreshNote: "（相对亮度 0〜1；比此更亮的背景视为无色。越大则越浅的颜色也会保留）",
+      maxImgWLabel: "图像最大宽度",
+      legendTrim: "开本 / 版面（DOCX 页面设置）",
+      unitLabel: "单位",
+      baseFontLabel: "基础字体（正文・标题）",
+      trimSizeLabel: "开本（裁切尺寸）",
+      trim6x9: "6 × 9 英寸（默认）",
+      trim85: "8.5 × 11 英寸（Letter）",
+      trimNone: "不设置（Word 默认）",
+      trimCustom: "自定义…",
+      customTrimLabel: "自定义尺寸（宽 × 高）",
+      unitIn: "英寸",
+      marginsLabel: "页边距（上 / 下 / 内 / 外）",
+      gutterLabel: "装订线（gutter）",
+      gutterNote: "（页数越多内侧越宽。≤150 页时内侧 0.75 较安全）",
+      s3Title: "3. 执行",
+      btnDocx: "转换并下载 DOCX",
+      btnSvg: "导出 SVG 图像（zip）",
+      clientNote: "※ 所有转换都在浏览器内完成（文件不会发送到服务器）。",
+      logTitle: "日志",
+      waiting: "等待中…",
+      libOk: "库加载完成（docx.js / JSZip）。请选择 HTML 文件。",
+      libFail: "CDN 库加载失败（docx / JSZip）。请检查网络连接。",
+      fileReadFail: "文件读取失败: {msg}",
+      fileInfo: "{name} 已加载（img: {img} / svg: {svg}）",
+      loadDone: "加载完成: {name}（img {img} / svg {svg}）",
+      noSvgExport: "没有 SVG 元素，SVG 导出已禁用。",
+      selectFormat: "请至少选择一种导出格式。",
+      svgStart: "SVG 导出开始（{n} 项 / SVG:{svg} PNG:{png} ×{scale}）…",
+      itemErr: "  {base}: {msg}",
+      noExportable: "没有可导出的图像。",
+      svgDone: "SVG 导出完成（{ok}/{total} 项）→ svg_export.zip",
+      noSvg: "没有 SVG。",
+      docxFatal: "DOCX 转换发生致命错误: {msg}",
+      docxStart: "DOCX 转换开始…",
+      svgEmbedFail: "  SVG 嵌入失败: {msg}",
+      imgEmbedFail: "  图像嵌入失败（CORS 等）: {msg}",
+      imgClamp: "图像最大宽度已调整为版面内容宽度 {w}px。",
+      noBody: "（无法提取正文）",
+      genDone: "已生成 {n} 个段落/表格。正在打包…",
+      docxDone: "DOCX 转换完成 → kdp_output.docx",
+      trimNoneLog: "开本: 使用 Word 默认。",
+      trimLog: "开本: {w} × {h} {u} / 页边距 上{t} 下{b} 内{i} 外{o} 装订{g} {u}",
+      contrastAdjusted: "已将正文 {n} 处文字颜色改为黑色（对比度）。",
+      figAdjusted: "已对图中 {n} 处颜色进行对比度调整。",
+      printApplied: "已应用打印模式样式（{n} 条规则）。",
+      progEstimate: "预计 〜{sec}秒（图像: {n} 张）。",
+      progPrep: "准备中…",
+      progImages: "正在转换图像 {i}/{n}…",
+      progBuild: "正在构建文档…",
+      progPackage: "正在打包 DOCX…",
+      progSvg: "正在导出图 {i}/{n}…",
+      progZip: "正在压缩 zip…",
+      progDone: "完成",
+      imgPlaceholder: "[图像{alt}]",
+      imgFailPlaceholder: "[图像无法嵌入{reason}]",
+      noBodyExtract: "（无法提取正文）",
+    },
+  };
+  const LANGCFG = { en: { flag: "🇺🇸", code: "EN" }, ja: { flag: "🇯🇵", code: "JA" }, zh: { flag: "🇨🇳", code: "ZH" } };
+  let currentLang = "en";
+
+  function t(key, params) {
+    let s = (TR[currentLang] && TR[currentLang][key]) || TR.en[key] || key;
+    if (params) for (const k in params) s = s.replace(new RegExp("\\{" + k + "\\}", "g"), params[k]);
+    return s;
+  }
+
+  const D = window.docx;
+  const els = {
+    file: document.getElementById("fileInput"),
+    fileBtn: document.getElementById("fileBtn"),
+    fileName: document.getElementById("fileName"),
+    fileInfo: document.getElementById("fileInfo"),
+    preview: document.getElementById("preview"),
+    stage: document.getElementById("stage"),
+    log: document.getElementById("log"),
+    btnDocx: document.getElementById("btnDocx"),
+    btnSvg: document.getElementById("btnSvg"),
+    expSvg: document.getElementById("expSvg"),
+    expPng: document.getElementById("expPng"),
+    pngScale: document.getElementById("pngScale"),
+    printMode: document.getElementById("printMode"),
+    embedImages: document.getElementById("embedImages"),
+    h1PageBreak: document.getElementById("h1PageBreak"),
+    forceContrast: document.getElementById("forceContrast"),
+    figContrast: document.getElementById("figContrast"),
+    calloutBg: document.getElementById("calloutBg"),
+    calloutThreshRow: document.getElementById("calloutThreshRow"),
+    calloutThresh: document.getElementById("calloutThresh"),
+    maxImgW: document.getElementById("maxImgW"),
+    progWrap: document.getElementById("progWrap"),
+    progBar: document.getElementById("progBar"),
+    progText: document.getElementById("progText"),
+    unitSel: document.getElementById("unitSel"),
+    baseFont: document.getElementById("baseFont"),
+    trimSize: document.getElementById("trimSize"),
+    customTrimRow: document.getElementById("customTrimRow"),
+    trimW: document.getElementById("trimW"),
+    trimH: document.getElementById("trimH"),
+    mTop: document.getElementById("mTop"),
+    mBottom: document.getElementById("mBottom"),
+    mInside: document.getElementById("mInside"),
+    mOutside: document.getElementById("mOutside"),
+    mGutter: document.getElementById("mGutter"),
+    langToggle: document.getElementById("langToggle"),
+    langPopup: document.getElementById("langPopup"),
+    langFlag: document.getElementById("langFlag"),
+    langCode: document.getElementById("langCode"),
+  };
+
+  let loaded = false;
+  const ADJ = { text: 0, fig: 0 }; // コントラスト補正のカウンタ（変換毎にリセット）
+
+  // ---- 進捗表示 ----
+  let progT0 = 0;
+  function elapsed() { return ((Date.now() - progT0) / 1000).toFixed(1); }
+  function progStart() { progT0 = Date.now(); els.progBar.style.width = "0%"; els.progText.textContent = ""; els.progWrap.style.display = "block"; }
+  function progStep(frac, msg) {
+    els.progBar.style.width = Math.round(Math.max(0, Math.min(1, frac)) * 100) + "%";
+    els.progText.textContent = msg + "  —  " + elapsed() + "s";
+  }
+  function progEnd() {
+    els.progBar.style.width = "100%";
+    els.progText.textContent = t("progDone") + "  —  " + elapsed() + "s";
+    setTimeout(() => { els.progWrap.style.display = "none"; }, 1800);
+  }
+  // 次フレームまで待って進捗描画を反映（重い同期処理の前に呼ぶ）
+  function nextFrame() { return new Promise(r => requestAnimationFrame(() => r())); }
+
+  // ---- i18n 適用 ----
+  function applyLang() {
+    document.querySelectorAll("[data-i18n]").forEach(el => {
+      if (el === els.log && els.log.dataset.init === "1") return; // ログ本文は上書きしない
+      if ((el === els.fileInfo || el === els.fileName) && el.dataset.dynamic === "1") return; // 動的セット済みは維持
+      el.textContent = t(el.getAttribute("data-i18n"));
+    });
+    document.querySelectorAll("[data-i18n-title]").forEach(el => { el.title = t(el.getAttribute("data-i18n-title")); });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach(el => { el.placeholder = t(el.getAttribute("data-i18n-placeholder")); });
+    const c = LANGCFG[currentLang];
+    els.langFlag.textContent = c.flag; els.langCode.textContent = c.code;
+    document.querySelectorAll(".lang-item").forEach(it => it.classList.toggle("active", it.dataset.lang === currentLang));
+    document.documentElement.lang = currentLang;
+  }
+  function setLanguage(lang) {
+    if (!TR[lang]) return;
+    currentLang = lang;
+    try { localStorage.setItem("kdpLang", lang); } catch (e) { /* private mode 等 */ }
+    applyLang();
+    els.langPopup.classList.remove("open");
+  }
+  // 言語スイッチャ配線
+  els.langToggle.addEventListener("click", (e) => { e.stopPropagation(); els.langPopup.classList.toggle("open"); });
+  document.querySelectorAll(".lang-item").forEach(it => it.addEventListener("click", () => setLanguage(it.dataset.lang)));
+  document.addEventListener("click", (e) => { if (!els.langPopup.contains(e.target) && e.target !== els.langToggle) els.langPopup.classList.remove("open"); });
+
+  // 初期言語（既定 en、保存があれば復元）
+  try { const saved = localStorage.getItem("kdpLang"); if (saved && TR[saved]) currentLang = saved; } catch (e) { /* noop */ }
+  applyLang();
+
+  // ---- ログ ----
+  function log(msg, cls) {
+    const line = cls ? `<span class="${cls}">${escapeHtml(msg)}</span>` : escapeHtml(msg);
+    if (els.log.dataset.init !== "1") { els.log.innerHTML = ""; els.log.dataset.init = "1"; }
+    els.log.innerHTML += line + "\n";
+    els.log.scrollTop = els.log.scrollHeight;
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+  }
+
+  if (!D || !window.JSZip) {
+    log(t("libFail"), "err");
+  } else {
+    log(t("libOk"), "ok");
+  }
+
+  // ================= 入力読み込み =================
+  els.fileBtn.addEventListener("click", () => els.file.click());
+  els.file.addEventListener("change", async (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    els.fileName.dataset.dynamic = "1";
+    els.fileName.textContent = f.name;
+    try {
+      const text = await f.text();
+      loadIntoStage(text, f.name);
+    } catch (err) {
+      log(t("fileReadFail", { msg: err.message }), "err");
+    }
+  });
+
+  function loadIntoStage(html, name) {
+    const doc = els.stage.contentDocument;
+    doc.open();
+    doc.write(html);
+    doc.close();
+    setTimeout(() => {
+      const body = doc.body || doc.documentElement;
+      const imgs = body.querySelectorAll("img").length;
+      const svgs = body.querySelectorAll("svg").length;
+      els.fileInfo.dataset.dynamic = "1";
+      els.fileInfo.textContent = t("fileInfo", { name, img: imgs, svg: svgs });
+      els.preview.innerHTML = "";
+      const clone = body.cloneNode(true);
+      clone.querySelectorAll("script").forEach(s => s.remove());
+      els.preview.appendChild(clone);
+      loaded = true;
+      els.btnDocx.disabled = false;
+      els.btnSvg.disabled = svgs === 0;
+      if (svgs === 0) log(t("noSvgExport"), "warn");
+      log(t("loadDone", { name, img: imgs, svg: svgs }), "ok");
+      const pn = setPrintMode(els.printMode.checked);
+      if (pn) log(t("printApplied", { n: pn }));
+    }, 60);
+  }
+
+  // ページの @media print ルールを screen にも常時適用し、getComputedStyle が
+  // 印刷時の見た目を返すようにする（KDP 白背景・黒文字を Word / 図に反映）。
+  function collectPrintCss(doc) {
+    const out = [];
+    let sheets; try { sheets = Array.from(doc.styleSheets); } catch (e) { return out; }
+    for (const sheet of sheets) {
+      let rules; try { rules = sheet.cssRules; } catch (e) { continue; } // cross-origin はスキップ
+      if (!rules) continue;
+      for (const r of Array.from(rules)) {
+        if (r.type === 4 /* CSSMediaRule */ && r.media && /print/i.test(r.media.mediaText)) {
+          for (const inner of Array.from(r.cssRules)) out.push(inner.cssText);
+        }
+      }
+    }
+    return out;
+  }
+  function setPrintMode(on) {
+    const doc = els.stage.contentDocument;
+    if (!doc || !doc.head) return 0;
+    const old = doc.getElementById("__print_emu");
+    if (old) old.remove();
+    if (!on) return 0;
+    const rules = collectPrintCss(doc);
+    if (!rules.length) return 0;
+    const s = doc.createElement("style");
+    s.id = "__print_emu";
+    s.textContent = rules.join("\n");
+    doc.head.appendChild(s);
+    return rules.length;
+  }
+  els.printMode.addEventListener("change", () => {
+    if (!loaded) return;
+    const n = setPrintMode(els.printMode.checked);
+    if (els.printMode.checked) log(n ? t("printApplied", { n }) : t("printApplied", { n: 0 }));
+  });
+
+  function stageBody() { return els.stage.contentDocument.body; }
+  function gcs(el) { return els.stage.contentWindow.getComputedStyle(el); }
+
+  // ================= 画像ユーティリティ =================
+  function serializeSvg(svg, fixContrast) {
+    const clone = svg.cloneNode(true);
+    if (!clone.getAttribute("xmlns")) clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    const rect = svg.getBoundingClientRect();
+    if (!clone.getAttribute("width") && rect.width) clone.setAttribute("width", Math.round(rect.width));
+    if (!clone.getAttribute("height") && rect.height) clone.setAttribute("height", Math.round(rect.height));
+    // CSS(スタイルシート)由来の塗り/線色を各要素へインライン化 → 単体でも忠実に描画される
+    // （これをしないと fill 等が失われ「図内の色が背景色になる」）。
+    inlineSvgStyles(svg, clone, fixContrast);
+    return '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(clone);
+  }
+
+  // インライン化する SVG プレゼンテーション系プロパティ
+  const SVG_PROPS = ["fill", "fill-opacity", "fill-rule", "stroke", "stroke-width", "stroke-opacity",
+    "stroke-linecap", "stroke-linejoin", "stroke-dasharray", "stroke-miterlimit", "opacity", "color",
+    "font-family", "font-size", "font-weight", "font-style", "text-anchor", "letter-spacing",
+    "stop-color", "stop-opacity", "visibility", "display"];
+
+  // live の computed style を clone にインライン化。fixContrast 時は text/線の低コントラストを濃色化。
+  function inlineSvgStyles(liveSvg, cloneSvg, fixContrast) {
+    const live = [liveSvg, ...liveSvg.querySelectorAll("*")];
+    const clone = [cloneSvg, ...cloneSvg.querySelectorAll("*")];
+    const n = Math.min(live.length, clone.length);
+    for (let i = 0; i < n; i++) {
+      const le = live[i], ce = clone[i];
+      if (!ce.style) continue;
+      let cs; try { cs = gcs(le); } catch (e) { continue; }
+      for (const p of SVG_PROPS) {
+        const v = cs.getPropertyValue(p);
+        if (v && v !== "" && v !== "normal" && v !== "auto") ce.style.setProperty(p, v);
+      }
+      if (fixContrast) {
+        const tag = String(le.tagName || "").toLowerCase();
+        if (tag === "text" || tag === "tspan") {
+          // 局所背景（テキストの下にある最小の塗り図形、無ければ白）に対して十分な
+          // コントラストが無ければ、その背景に合わせて黒か白へ寄せる。
+          // → 暗いボックス上の文字は白に、白地の文字は黒に（背景色との同化を防ぐ）。
+          const fill = parseAnyColor(cs.fill) || "000000";
+          const bg = localBg(le, live);
+          if (contrastRatio(fill, bg) < 4.5) {
+            const useBlack = contrastRatio("000000", bg) >= contrastRatio("ffffff", bg);
+            ce.style.setProperty("fill", useBlack ? "#000000" : "#ffffff"); ADJ.fig++;
+          }
+        }
+        const stroke = parseAnyColor(cs.stroke);
+        if (stroke && cs.stroke !== "none" && contrastWhite(stroke) < 3.0) {
+          ce.style.setProperty("stroke", darkenToContrast(stroke, 3.0)); ADJ.fig++;
+        }
+      }
+    }
+  }
+
+  function svgToPng(svgStr, w, h, scale) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const blob = new Blob([svgStr], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      img.onload = () => {
+        try {
+          const cw = Math.max(1, Math.round((w || img.width) * scale));
+          const ch = Math.max(1, Math.round((h || img.height) * scale));
+          const canvas = document.createElement("canvas");
+          canvas.width = cw; canvas.height = ch;
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, cw, ch);
+          ctx.drawImage(img, 0, 0, cw, ch);
+          URL.revokeObjectURL(url);
+          canvas.toBlob(b => {
+            if (!b) return reject(new Error("canvas.toBlob failed"));
+            b.arrayBuffer().then(ab => resolve({ bytes: new Uint8Array(ab), width: cw, height: ch }));
+          }, "image/png");
+        } catch (err) { URL.revokeObjectURL(url); reject(err); }
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("SVG rasterization failed")); };
+      img.src = url;
+    });
+  }
+
+  function imgToPng(imgEl, scale) {
+    return new Promise((resolve, reject) => {
+      const im = new Image();
+      im.crossOrigin = "anonymous";
+      im.onload = () => {
+        try {
+          const rect = imgEl.getBoundingClientRect();
+          const bw = rect.width || im.naturalWidth;
+          const bh = rect.height || im.naturalHeight;
+          const cw = Math.max(1, Math.round(bw * scale));
+          const ch = Math.max(1, Math.round(bh * scale));
+          const canvas = document.createElement("canvas");
+          canvas.width = cw; canvas.height = ch;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(im, 0, 0, cw, ch);
+          canvas.toBlob(b => {
+            if (!b) return reject(new Error("toBlob failed"));
+            b.arrayBuffer().then(ab => resolve({ bytes: new Uint8Array(ab), width: cw, height: ch }));
+          }, "image/png");
+        } catch (err) { reject(err); } // CORS taint → SecurityError
+      };
+      im.onerror = () => reject(new Error("image load failed"));
+      im.src = imgEl.currentSrc || imgEl.src;
+    });
+  }
+
+  // ================= SVG Export =================
+  els.btnSvg.addEventListener("click", async () => {
+    if (!loaded) return;
+    const wantSvg = els.expSvg.checked, wantPng = els.expPng.checked;
+    if (!wantSvg && !wantPng) { log(t("selectFormat"), "warn"); return; }
+    const scale = clampInt(els.pngScale.value, 1, 8, 2);
+    const svgs = [...stageBody().querySelectorAll("svg")];
+    if (!svgs.length) { log(t("noSvg"), "warn"); return; }
+
+    els.btnSvg.disabled = true;
+    setPrintMode(els.printMode.checked); // トグル状態を反映（冪等）
+    const fixFig = els.figContrast.checked;
+    ADJ.fig = 0;
+    log(t("svgStart", { n: svgs.length, svg: wantSvg, png: wantPng, scale }));
+    progStart();
+    const zip = new window.JSZip();
+    let ok = 0;
+    for (let i = 0; i < svgs.length; i++) {
+      progStep(0.05 + 0.8 * (i / svgs.length), t("progSvg", { i: i + 1, n: svgs.length }));
+      await nextFrame();
+      const svg = svgs[i];
+      const base = "image_" + String(i + 1).padStart(2, "0");
+      const rect = svg.getBoundingClientRect();
+      const svgStr = serializeSvg(svg, fixFig);
+      try {
+        if (wantSvg) zip.file(base + ".svg", svgStr);
+        if (wantPng) { const png = await svgToPng(svgStr, rect.width, rect.height, scale); zip.file(base + ".png", png.bytes); }
+        ok++;
+      } catch (err) { log(t("itemErr", { base, msg: err.message }), "err"); }
+    }
+    if (ok === 0) { log(t("noExportable"), "err"); els.progWrap.style.display = "none"; els.btnSvg.disabled = false; return; }
+    if (ADJ.fig) log(t("figAdjusted", { n: ADJ.fig }));
+    progStep(0.9, t("progZip"));
+    await nextFrame();
+    const blob = await zip.generateAsync({ type: "blob" });
+    downloadBlob(blob, "svg_export.zip");
+    log(t("svgDone", { ok, total: svgs.length }), "ok");
+    progEnd();
+    els.btnSvg.disabled = false;
+  });
+
+  // ================= DOCX 変換 =================
+  els.btnDocx.addEventListener("click", async () => {
+    if (!loaded) return;
+    els.btnDocx.disabled = true;
+    try { await convertToDocx(); }
+    catch (err) { log(t("docxFatal", { msg: err.message }), "err"); console.error(err); els.progWrap.style.display = "none"; }
+    els.btnDocx.disabled = false;
+  });
+
+  async function convertToDocx() {
+    setPrintMode(els.printMode.checked); // トグル状態を反映（冪等）
+    const body = stageBody();
+    const embed = els.embedImages.checked;
+    const scale = clampInt(els.pngScale.value, 1, 8, 2);
+    let maxW = clampInt(els.maxImgW.value, 100, 1200, 500);
+    const contentW = contentWidthPx();
+    if (contentW && contentW < maxW) { log(t("imgClamp", { w: contentW })); maxW = contentW; }
+    const opt = { embed, maxW, forceContrast: els.forceContrast.checked };
+    const fixFig = els.figContrast.checked;
+    ADJ.text = 0; ADJ.fig = 0;
+    progStart();
+    progStep(0.03, t("progPrep"));
+    log(t("docxStart"));
+
+    const imgMap = new WeakMap();
+    if (embed) {
+      const svgs = [...body.querySelectorAll("svg")];
+      const imgs = [...body.querySelectorAll("img")];
+      const total = svgs.length + imgs.length;
+      log(t("progEstimate", { sec: Math.max(1, Math.round(0.8 + total * 0.35)), n: total }));
+      let k = 0;
+      for (const svg of svgs) {
+        progStep(0.05 + 0.55 * (k / Math.max(1, total)), t("progImages", { i: ++k, n: total }));
+        await nextFrame();
+        const rect = svg.getBoundingClientRect();
+        try {
+          const png = await svgToPng(serializeSvg(svg, fixFig), rect.width, rect.height, scale);
+          imgMap.set(svg, { ...png, dispW: rect.width || png.width / scale, dispH: rect.height || png.height / scale });
+        } catch (err) { log(t("svgEmbedFail", { msg: err.message }), "warn"); imgMap.set(svg, { error: err.message }); }
+      }
+      for (const im of imgs) {
+        progStep(0.05 + 0.55 * (k / Math.max(1, total)), t("progImages", { i: ++k, n: total }));
+        await nextFrame();
+        try {
+          const png = await imgToPng(im, scale);
+          const rect = im.getBoundingClientRect();
+          imgMap.set(im, { ...png, dispW: rect.width || png.width / scale, dispH: rect.height || png.height / scale });
+        } catch (err) { log(t("imgEmbedFail", { msg: err.message }), "warn"); imgMap.set(im, { error: err.message }); }
+      }
+    }
+
+    progStep(0.62, t("progBuild"));
+    await nextFrame();
+    const out = [];
+    processContainer(body, out, imgMap, opt);
+    if (!out.length) out.push(new D.Paragraph({ style: "BodyText", children: [new D.TextRun(t("noBody"))] }));
+
+    if (ADJ.text) log(t("contrastAdjusted", { n: ADJ.text }));
+    if (ADJ.fig) log(t("figAdjusted", { n: ADJ.fig }));
+
+    progStep(0.82, t("progPackage"));
+    await nextFrame();
+    const doc = new D.Document({
+      styles: buildStyles(),
+      numbering: {
+        config: [{
+          reference: "ord-list",
+          levels: [0, 1, 2].map(lv => ({
+            level: lv, format: D.LevelFormat.DECIMAL, text: `%${lv + 1}.`, alignment: D.AlignmentType.START,
+            style: { paragraph: { indent: { left: 720 * (lv + 1), hanging: 360 } } },
+          })),
+        }],
+      },
+      sections: [{ properties: buildSectionProps(), children: out }],
+    });
+
+    log(t("genDone", { n: out.length }));
+    const blob = await D.Packer.toBlob(doc);
+    downloadBlob(blob, "kdp_output.docx");
+    log(t("docxDone"), "ok");
+    progEnd();
+  }
+
+  // ---- ブロック走査 ----
+  const BLOCK = new Set(["P", "DIV", "SECTION", "ARTICLE", "MAIN", "HEADER", "FOOTER", "BLOCKQUOTE", "PRE",
+    "H1", "H2", "H3", "H4", "H5", "H6", "UL", "OL", "TABLE", "FIGURE", "FIGCAPTION", "HR"]);
+  const HEADING = { H1: 1, H2: 2, H3: 3, H4: 4, H5: 5, H6: 6 };
+
+  function processContainer(el, out, imgMap, opt) {
+    let buffer = [];
+    const flush = (styleEl) => { if (buffer.length) { out.push(makeParagraph(buffer, styleEl || el, {})); buffer = []; } };
+    for (const child of el.childNodes) {
+      if (child.nodeType === 3) { pushText(child, buffer, opt); }
+      else if (child.nodeType === 1) {
+        const tag = child.tagName;
+        if (isHidden(child)) continue;
+        if (tag === "IMG" || String(tag).toUpperCase() === "SVG") { const run = imageRun(child, imgMap, opt); if (run) buffer.push(run); }
+        else if (tag === "BR") { buffer.push(new D.TextRun({ break: 1 })); }
+        else if (BLOCK.has(tag)) { flush(); dispatchBlock(child, out, imgMap, opt); }
+        else { gatherInline(child, buffer, imgMap, opt); }
+      }
+    }
+    flush();
+  }
+
+  function dispatchBlock(el, out, imgMap, opt) {
+    const tag = el.tagName;
+    if (tag === "HR") { out.push(new D.Paragraph({ border: { bottom: { style: D.BorderStyle.SINGLE, size: 6, color: "999999" } } })); return; }
+    if (HEADING[tag]) { out.push(makeHeading(el, imgMap, opt)); return; }
+    if (tag === "UL" || tag === "OL") { processList(el, out, imgMap, opt, tag === "OL", 0); return; }
+    if (tag === "TABLE") { const tbl = makeTable(el, imgMap, opt); if (tbl) out.push(tbl); return; }
+    if (hasBlockChild(el)) { processContainer(el, out, imgMap, opt); return; }
+    const runs = [];
+    gatherInline(el, runs, imgMap, opt);
+    if (runs.length) {
+      const extra = {};
+      if (tag === "BLOCKQUOTE") extra.style = "Quote";
+      else if (tag === "PRE") extra.style = "CodeBlock";
+      else if (tag === "FIGCAPTION") extra.style = "Caption";
+      out.push(makeParagraph(runs, el, extra));
+    }
+  }
+
+  function processList(listEl, out, imgMap, opt, ordered, level) {
+    for (const li of listEl.children) {
+      if (li.tagName !== "LI") continue;
+      const runs = [];
+      for (const c of li.childNodes) {
+        if (c.nodeType === 1 && (c.tagName === "UL" || c.tagName === "OL")) continue;
+        if (c.nodeType === 3) pushText(c, runs, opt);
+        else if (c.nodeType === 1) {
+          if (c.tagName === "IMG" || String(c.tagName).toUpperCase() === "SVG") { const r = imageRun(c, imgMap, opt); if (r) runs.push(r); }
+          else gatherInline(c, runs, imgMap, opt);
+        }
+      }
+      if (runs.length) {
+        const p = { children: runs, style: "ListParagraph" };
+        if (ordered) p.numbering = { reference: "ord-list", level: Math.min(level, 2) };
+        else p.bullet = { level: Math.min(level, 2) };
+        out.push(new D.Paragraph(p));
+      }
+      for (const c of li.children) {
+        if (c.tagName === "UL" || c.tagName === "OL") processList(c, out, imgMap, opt, c.tagName === "OL", level + 1);
+      }
+    }
+  }
+
+  function makeTable(tableEl, imgMap, opt) {
+    const rows = [];
+    for (const tr of tableEl.querySelectorAll("tr")) {
+      const cells = [];
+      for (const td of tr.children) {
+        if (td.tagName !== "TD" && td.tagName !== "TH") continue;
+        const runs = [];
+        gatherInline(td, runs, imgMap, opt);
+        const para = runs.length ? new D.Paragraph({ style: "BodyText", children: runs }) : new D.Paragraph({ style: "BodyText", text: "" });
+        cells.push(new D.TableCell({ children: [para], shading: td.tagName === "TH" ? { fill: "eeeeee" } : undefined }));
+      }
+      if (cells.length) rows.push(new D.TableRow({ children: cells }));
+    }
+    if (!rows.length) return null;
+    return new D.Table({ rows, width: { size: 100, type: D.WidthType.PERCENTAGE }, borders: allBorders("bbbbbb") });
+  }
+
+  function allBorders(color) {
+    const b = { style: D.BorderStyle.SINGLE, size: 4, color };
+    return { top: b, bottom: b, left: b, right: b, insideHorizontal: b, insideVertical: b };
+  }
+
+  function gatherInline(node, buffer, imgMap, opt, mode) {
+    for (const child of node.childNodes) {
+      if (child.nodeType === 3) { pushText(child, buffer, opt, mode); }
+      else if (child.nodeType === 1) {
+        if (isHidden(child)) continue;
+        const tag = String(child.tagName).toUpperCase();
+        if (tag === "BR") buffer.push(new D.TextRun({ break: 1 }));
+        else if (tag === "IMG" || tag === "SVG") { const r = imageRun(child, imgMap, opt); if (r) buffer.push(r); }
+        else gatherInline(child, buffer, imgMap, opt, mode);
+      }
+    }
+  }
+
+  function pushText(textNode, buffer, opt, mode) {
+    const parent = textNode.parentElement;
+    if (!parent) return;
+    const pre = !!parent.closest("pre");
+    let txt = textNode.textContent;
+    if (!pre) txt = txt.replace(/\s+/g, " ");
+    if (txt === "") return;
+    if (!pre && txt.trim() === "" && buffer.length === 0) return;
+    const m = { forceContrast: !!(opt && opt.forceContrast), heading: !!(mode && mode.heading) };
+    const cs = gcs(parent);
+    // pre/code 内の改行は TextRun の \n では反映されないため、明示的な改行ランに変換する。
+    if (pre && txt.indexOf("\n") >= 0) {
+      const lines = txt.split("\n");
+      lines.forEach((ln, idx) => {
+        if (idx > 0) buffer.push(new D.TextRun({ break: 1 }));
+        if (ln !== "") buffer.push(runFromStyle(ln, cs, parent, m));
+      });
+      return;
+    }
+    buffer.push(runFromStyle(txt, cs, parent, m));
+  }
+
+  function runFromStyle(text, cs, el, mode) {
+    mode = mode || {};
+    const opts = { text };
+    const weight = parseInt(cs.fontWeight, 10);
+    if (weight >= 600 || cs.fontWeight === "bold" || el.closest("b,strong")) opts.bold = true;
+    if (cs.fontStyle === "italic" || el.closest("i,em")) opts.italics = true;
+    const deco = cs.textDecorationLine || cs.textDecoration || "";
+    if (deco.includes("underline") || el.closest("u")) opts.underline = {};
+    if (deco.includes("line-through")) opts.strike = true;
+    if (el.tagName === "SUP") opts.superScript = true;
+    if (el.tagName === "SUB") opts.subScript = true;
+    // 見出しはスタイル(Heading1-6)に外観を委ねる: サイズ/色/フォントを直接書式で載せない
+    if (mode.heading) return new D.TextRun(opts);
+    const color = rgbToHex(cs.color);
+    if (color) {
+      // 地の文は基本黒: 無彩色(グレー)系、または白背景で低コントラストな色は黒へ寄せる。
+      // 有彩色でコントラスト十分な色(濃い赤/青など)のみ原色を保持。
+      if (mode.forceContrast && (isGrayish(color) || contrastWhite(color) < 4.5)) {
+        if (color !== "000000") ADJ.text++;
+      } else if (color !== "000000") {
+        opts.color = color;
+      }
+    }
+    const px = parseFloat(cs.fontSize);
+    if (px) opts.size = Math.round(px * 1.5);
+    // 本文フォントはスタイル(基本=游ゴシック)に委ねる。原文フォントは載せない。
+    // コードのみ等幅を直接指定。
+    if (el.closest("code,pre")) opts.font = "Consolas";
+    return new D.TextRun(opts);
+  }
+
+  function makeParagraph(runs, styleEl, extra) {
+    extra = extra || {};
+    const cs = gcs(styleEl);
+    const styleId = extra.style || "BodyText";
+    const opts = { children: runs, style: styleId };
+    // 本文のみ、原文の配置・段落間隔を直接反映。特殊スタイル(Quote/Code/Caption)は
+    // スタイル定義に外観を委ねて上書きしない。
+    if (styleId === "BodyText") {
+      opts.alignment = mapAlign(cs.textAlign);
+      const spacing = {};
+      const mb = parseFloat(cs.marginBottom); if (mb) spacing.after = Math.round(mb * 15);
+      const mt = parseFloat(cs.marginTop); if (mt) spacing.before = Math.round(mt * 15);
+      if (Object.keys(spacing).length) opts.spacing = spacing;
+      if (extra.indent) opts.indent = extra.indent;
+      applyCalloutShading(opts, effectiveBg(styleEl));
+    }
+    return new D.Paragraph(opts);
+  }
+
+  // コラム/コールアウト: 背景色付きブロックとして段落に網掛け＋左罫を付与
+  function applyCalloutShading(opts, bg) {
+    if (!bg) return;
+    opts.shading = { fill: bg };
+    opts.border = { left: { style: D.BorderStyle.SINGLE, size: 12, color: shadeHex(bg, 0.6), space: 6 } };
+  }
+
+  function makeHeading(el, imgMap, opt) {
+    const runs = [];
+    gatherInline(el, runs, imgMap, opt, { heading: true });
+    const lv = HEADING[el.tagName];
+    const opts = { children: runs, heading: D.HeadingLevel["HEADING_" + lv], alignment: mapAlign(gcs(el).textAlign) };
+    if (lv === 1 && els.h1PageBreak.checked) opts.pageBreakBefore = true;
+    applyCalloutShading(opts, effectiveBg(el));
+    return new D.Paragraph(opts);
+  }
+
+  function imageRun(el, imgMap, opt) {
+    if (!opt.embed) {
+      const alt = el.getAttribute && el.getAttribute("alt");
+      return new D.TextRun({ text: t("imgPlaceholder", { alt: alt ? ": " + alt : "" }), italics: true, color: "888888" });
+    }
+    const data = imgMap.get(el);
+    if (!data || data.error) {
+      return new D.TextRun({ text: t("imgFailPlaceholder", { reason: data && data.error ? ": " + data.error : "" }), italics: true, color: "cc4444" });
+    }
+    let w = data.dispW || data.width, h = data.dispH || data.height;
+    if (w > opt.maxW) { const r = opt.maxW / w; w = opt.maxW; h = Math.round(h * r); }
+    return new D.ImageRun({ data: data.bytes, transformation: { width: Math.round(w), height: Math.round(h) } });
+  }
+
+  // 単位系（inch/mm）。プリセット判型の data-w/data-h は常に inch(正準)。
+  // カスタム寸法・マージン・綴じしろの入力欄のみ現在の単位で解釈する。
+  const MM_PER_IN = 25.4;
+  function toIn(v) { return els.unitSel.value === "mm" ? v / MM_PER_IN : v; }
+
+  // 判型・マージン → docx セクションプロパティ（1 inch = 1440 twip）
+  function buildSectionProps() {
+    const IN = 1440;
+    const margin = {
+      top: Math.round(toIn(numOr(els.mTop.value, 0)) * IN),
+      bottom: Math.round(toIn(numOr(els.mBottom.value, 0)) * IN),
+      left: Math.round(toIn(numOr(els.mInside.value, 0)) * IN),
+      right: Math.round(toIn(numOr(els.mOutside.value, 0)) * IN),
+      gutter: Math.round(toIn(numOr(els.mGutter.value, 0)) * IN),
+    };
+    const sel = els.trimSize, val = sel.value;
+    if (val === "none") { log(t("trimNoneLog"), "warn"); return { page: { margin } }; }
+    let wIn, hIn;
+    if (val === "custom") { wIn = toIn(numOr(els.trimW.value, 6)); hIn = toIn(numOr(els.trimH.value, 9)); }
+    else { const opt = sel.options[sel.selectedIndex]; wIn = parseFloat(opt.dataset.w); hIn = parseFloat(opt.dataset.h); }
+    if (!wIn || !hIn) return { page: { margin } };
+    const u = els.unitSel.value;
+    const dw = u === "mm" ? (wIn * MM_PER_IN).toFixed(0) : wIn;
+    const dh = u === "mm" ? (hIn * MM_PER_IN).toFixed(0) : hIn;
+    log(t("trimLog", { w: dw, h: dh, u, t: els.mTop.value, b: els.mBottom.value, i: els.mInside.value, o: els.mOutside.value, g: els.mGutter.value }));
+    return { page: { size: { width: Math.round(wIn * IN), height: Math.round(hIn * IN) }, margin } };
+  }
+  function numOr(v, def) { const n = parseFloat(v); return isNaN(n) ? def : n; }
+  function contentWidthPx() {
+    const sel = els.trimSize;
+    if (sel.value === "none") return null;
+    let wIn;
+    if (sel.value === "custom") wIn = toIn(numOr(els.trimW.value, 0));
+    else wIn = parseFloat(sel.options[sel.selectedIndex].dataset.w);
+    if (!wIn) return null;
+    const inner = wIn - toIn(numOr(els.mInside.value, 0)) - toIn(numOr(els.mOutside.value, 0));
+    return inner > 0 ? Math.floor(inner * 96) : null;
+  }
+
+  // カスタム判型のときだけ寸法入力を表示
+  els.trimSize.addEventListener("change", () => {
+    els.customTrimRow.style.display = els.trimSize.value === "custom" ? "flex" : "none";
+  });
+
+  // コラム反映 ON のときだけ閾値入力を表示
+  function syncCalloutThreshRow() {
+    els.calloutThreshRow.style.display = els.calloutBg.checked ? "flex" : "none";
+  }
+  els.calloutBg.addEventListener("change", syncCalloutThreshRow);
+  syncCalloutThreshRow();
+
+  // ---- 単位切替（inch ⇔ mm）----
+  const UNIT_FIELDS = ["trimW", "trimH", "mTop", "mBottom", "mInside", "mOutside", "mGutter"];
+  let prevUnit = "in";
+  function applyUnitLabels() {
+    const sym = els.unitSel.value === "mm" ? "mm" : "in";
+    document.querySelectorAll(".unit-label").forEach(s => { s.textContent = sym; });
+  }
+  els.unitSel.addEventListener("change", () => {
+    const nu = els.unitSel.value;
+    if (nu !== prevUnit) {
+      const toMm = nu === "mm";
+      for (const id of UNIT_FIELDS) {
+        const el = els[id]; const n = parseFloat(el.value);
+        if (!isNaN(n)) el.value = toMm ? (n * MM_PER_IN).toFixed(1) : (n / MM_PER_IN).toFixed(3);
+        el.step = toMm ? "0.5" : "0.05";
+      }
+      prevUnit = nu;
+    }
+    applyUnitLabels();
+  });
+
+  // ================= Word スタイル定義 =================
+  // KDP 白背景向け: Normal は黒・見出しは階層化した名前付きスタイル。段落へ割り当てて
+  // 「すべて標準」を解消する。
+  // 基本フォント。日本語も確実に反映されるよう rFonts の ascii/hAnsi/eastAsia/cs を全て指定。
+  function jpFont(name) { return { ascii: name, hAnsi: name, eastAsia: name, cs: name }; }
+  function buildStyles() {
+    const base = (els.baseFont.value || "游ゴシック").trim();
+    const f = jpFont(base);
+    const heading = (size, extra) => ({
+      run: Object.assign({ size, bold: true, color: "000000", font: f }, extra && extra.run),
+      paragraph: Object.assign({ keepNext: true }, extra && extra.paragraph),
+    });
+    return {
+      default: {
+        document: { run: { color: "000000", size: 22, font: f }, paragraph: { spacing: { line: 276 } } },
+        heading1: heading(32, { paragraph: { spacing: { before: 360, after: 160 } } }),
+        heading2: heading(28, { paragraph: { spacing: { before: 280, after: 120 } } }),
+        heading3: heading(26, { paragraph: { spacing: { before: 220, after: 100 } } }),
+        heading4: heading(24, { paragraph: { spacing: { before: 200, after: 80 } } }),
+        heading5: heading(22, { paragraph: { spacing: { before: 180, after: 80 } } }),
+        heading6: heading(22, { run: { italics: true }, paragraph: { spacing: { before: 160, after: 80 } } }),
+      },
+      paragraphStyles: [
+        { id: "BodyText", name: "Body Text", basedOn: "Normal", next: "BodyText", quickFormat: true,
+          run: { color: "000000", font: f }, paragraph: { spacing: { after: 120, line: 276 } } },
+        { id: "ListParagraph", name: "List Paragraph", basedOn: "Normal", next: "ListParagraph", quickFormat: true,
+          run: { color: "000000", font: f }, paragraph: { spacing: { after: 60 } } },
+        { id: "Quote", name: "Quote", basedOn: "Normal", next: "BodyText", quickFormat: true,
+          run: { italics: true, color: "333333", font: f },
+          paragraph: { indent: { left: 720, right: 720 }, spacing: { before: 120, after: 120 },
+            border: { left: { style: D.BorderStyle.SINGLE, size: 12, color: "999999", space: 8 } } } },
+        { id: "CodeBlock", name: "Code Block", basedOn: "Normal", next: "CodeBlock", quickFormat: true,
+          run: { font: "Consolas", size: 20, color: "000000" },
+          paragraph: { shading: { fill: "f4f4f4" }, spacing: { after: 0, line: 240 },
+            border: { left: { style: D.BorderStyle.SINGLE, size: 12, color: "cccccc", space: 6 } } } },
+        { id: "Caption", name: "Caption", basedOn: "Normal", next: "BodyText", quickFormat: true,
+          run: { italics: true, size: 18, color: "333333", font: f },
+          paragraph: { alignment: D.AlignmentType.CENTER, spacing: { before: 60, after: 200 } } },
+      ],
+    };
+  }
+
+  // ---- コントラスト計算（WCAG 相対輝度・白背景基準）----
+  function relLum(hex) {
+    const lin = i => { let v = parseInt(hex.substr(i, 2), 16) / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * lin(0) + 0.7152 * lin(2) + 0.0722 * lin(4);
+  }
+  function contrastRatio(h1, h2) {
+    const a = relLum(h1), b = relLum(h2), hi = Math.max(a, b), lo = Math.min(a, b);
+    return (hi + 0.05) / (lo + 0.05);
+  }
+  function contrastWhite(hex) { return contrastRatio(hex, "ffffff"); }
+  // テキストの局所背景色: 中心座標を含む最小の「塗り図形」の fill。無ければ白。
+  function localBg(liveEl, liveArr) {
+    let tr; try { tr = liveEl.getBoundingClientRect(); } catch (e) { return "ffffff"; }
+    const cx = tr.left + tr.width / 2, cy = tr.top + tr.height / 2;
+    let best = null, bestArea = Infinity;
+    for (const el of liveArr) {
+      if (el === liveEl) continue;
+      const tag = String(el.tagName || "").toLowerCase();
+      if (!/^(rect|circle|ellipse|path|polygon)$/.test(tag)) continue;
+      let cs; try { cs = gcs(el); } catch (e) { continue; }
+      const fill = parseAnyColor(cs.fill);
+      if (!fill) continue;
+      if (parseFloat(cs.fillOpacity || "1") < 0.5) continue;
+      let r; try { r = el.getBoundingClientRect(); } catch (e) { continue; }
+      if (r.width <= 0 || r.height <= 0) continue;
+      if (cx >= r.left && cx <= r.right && cy >= r.top && cy <= r.bottom) {
+        const area = r.width * r.height;
+        if (area < bestArea) { bestArea = area; best = fill; }
+      }
+    }
+    return best || "ffffff";
+  }
+  function isNearWhite(hex) {
+    let thr = parseFloat(els.calloutThresh.value);
+    if (isNaN(thr)) thr = 0.93;
+    thr = Math.min(1, Math.max(0.5, thr));
+    return relLum(hex) > thr;
+  }
+  function shadeHex(hex, f) {
+    const c = [0, 2, 4].map(i => Math.max(0, Math.min(255, Math.round(parseInt(hex.substr(i, 2), 16) * f))));
+    return c.map(v => v.toString(16).padStart(2, "0")).join("");
+  }
+  // 要素から祖先を辿り、最初に見つかる「白でも透明でもない背景色」を返す（コラム/コールアウト検出）。
+  function effectiveBg(el) {
+    if (!els.calloutBg.checked || !el) return null;
+    const bodyEl = stageBody();
+    let node = el;
+    while (node && node !== bodyEl && node.nodeType === 1) {
+      let cs; try { cs = gcs(node); } catch (e) { break; }
+      const hex = parseAnyColor(cs.backgroundColor);
+      if (hex && !isNearWhite(hex)) return hex;
+      node = node.parentElement;
+    }
+    return null;
+  }
+  // 無彩色(グレー)に近いか: RGB の最大差が小さい = 彩度が低い
+  function isGrayish(hex) {
+    const r = parseInt(hex.substr(0, 2), 16), g = parseInt(hex.substr(2, 2), 16), b = parseInt(hex.substr(4, 2), 16);
+    return (Math.max(r, g, b) - Math.min(r, g, b)) < 40;
+  }
+  function parseAnyColor(str) {
+    if (!str) return null;
+    str = String(str).trim();
+    if (str === "none" || str === "transparent") return null;
+    const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/.exec(str);
+    if (m) { if (m[4] !== undefined && parseFloat(m[4]) === 0) return null; return [1, 2, 3].map(i => parseInt(m[i], 10).toString(16).padStart(2, "0")).join(""); }
+    let h = str.replace("#", "");
+    if (/^[0-9a-fA-F]{3}$/.test(h)) h = h.split("").map(c => c + c).join("");
+    if (/^[0-9a-fA-F]{6}$/.test(h)) return h.toLowerCase();
+    return null; // 名前付き色は対象外
+  }
+  function darkenToContrast(hex, target) {
+    target = target || 4.5;
+    let r = parseInt(hex.substr(0, 2), 16), g = parseInt(hex.substr(2, 2), 16), b = parseInt(hex.substr(4, 2), 16);
+    const toHex = () => [r, g, b].map(v => Math.max(0, v).toString(16).padStart(2, "0")).join("");
+    let guard = 0;
+    while (contrastWhite(toHex()) < target && guard++ < 25) { r = Math.round(r * 0.82); g = Math.round(g * 0.82); b = Math.round(b * 0.82); }
+    return "#" + toHex();
+  }
+
+  // ================= 小物 =================
+  function isHidden(el) {
+    if (!el.getBoundingClientRect) return false;
+    const cs = gcs(el);
+    return cs.display === "none" || cs.visibility === "hidden";
+  }
+  function hasBlockChild(el) { for (const c of el.children) if (BLOCK.has(c.tagName)) return true; return false; }
+  function mapAlign(a) {
+    switch (a) {
+      case "center": return D.AlignmentType.CENTER;
+      case "right": return D.AlignmentType.RIGHT;
+      case "justify": return D.AlignmentType.JUSTIFIED;
+      default: return D.AlignmentType.LEFT;
+    }
+  }
+  function rgbToHex(rgb) {
+    const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(rgb || "");
+    if (!m) return null;
+    return [1, 2, 3].map(i => parseInt(m[i], 10).toString(16).padStart(2, "0")).join("");
+  }
+  function firstFont(fam) {
+    if (!fam) return null;
+    const f = fam.split(",")[0].replace(/["']/g, "").trim();
+    return f || null;
+  }
+  function clampInt(v, lo, hi, def) {
+    const n = parseInt(v, 10);
+    if (isNaN(n)) return def;
+    return Math.min(hi, Math.max(lo, n));
+  }
+  function downloadBlob(blob, name) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+  }
+})();
+</script>
+</body>
+</html>
