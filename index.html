@@ -145,6 +145,14 @@
       <label class="row"><input type="checkbox" id="printMode" checked> <span data-i18n="printModeLabel">Apply the page's print styles (@media print) — recommended for KDP</span></label>
       <label class="row"><input type="checkbox" id="embedImages" checked> <span data-i18n="embedImagesLabel">Embed images in DOCX (as PNG)</span></label>
       <label class="row"><input type="checkbox" id="h1PageBreak" checked> <span data-i18n="h1PageBreakLabel">Page break before h1 (KDP chapter break)</span></label>
+      <label class="row"><input type="checkbox" id="tocEnable" checked> <span data-i18n="tocEnableLabel">Insert a Word table-of-contents field (after the title h1)</span></label>
+      <label class="row" id="tocOptRow"><span data-i18n="tocTitleLabel">TOC heading</span>
+        <input type="text" id="tocTitle" value="目次" style="width:160px; padding:4px 6px; border:1px solid #ccc; border-radius:6px;">
+        <span data-i18n="tocLevelsLabel">Heading levels</span>
+        <input type="number" id="tocFrom" value="1" min="1" max="6" step="1"> –
+        <input type="number" id="tocTo" value="3" min="1" max="6" step="1">
+        <span class="muted" data-i18n="tocNote">(A real TOC field. Word fills in the page numbers when the field updates: Ctrl+A → F9, or "Update table")</span>
+      </label>
       <label class="row"><input type="checkbox" id="forceContrast" checked> <span data-i18n="contrastLabel">Body text black for contrast (white background)</span></label>
       <label class="row"><input type="checkbox" id="figContrast" checked> <span data-i18n="figContrastLabel">Fix low-contrast colors in figures</span></label>
       <label class="row"><input type="checkbox" id="calloutBg" checked> <span data-i18n="calloutBgLabel">Keep colored-background blocks (columns/callouts)</span></label>
@@ -259,6 +267,17 @@
       printModeLabel: "Apply the page's print styles (@media print) — recommended for KDP",
       embedImagesLabel: "Embed images in DOCX (as PNG)",
       h1PageBreakLabel: "Page break before h1 (KDP chapter break)",
+      tocEnableLabel: "Insert a Word table-of-contents field (after the title h1)",
+      tocTitleLabel: "TOC heading",
+      tocLevelsLabel: "Heading levels",
+      tocNote: "(A real TOC field. Word fills in the page numbers when the field updates: Ctrl+A → F9, or \"Update table\")",
+      tocAdded: "Inserted a TOC field (levels {range}) {where}. Page numbers appear once Word updates the field.",
+      tocAtTop: "at the top of the document",
+      tocAfterH1: "after the title h1",
+      tocNoH1: "No h1 was found, so the TOC field was placed at the top of the document.",
+      tocBadRange: "TOC not inserted: heading level range {from}-{to} is invalid (must be 1–6, and from ≤ to).",
+      tocUnsupported: "TOC not inserted: this build of docx.js has no TableOfContents class.",
+      tocFail: "TOC not inserted: {msg}",
       contrastLabel: "Body text black for contrast (white background)",
       figContrastLabel: "Fix low-contrast colors in figures",
       calloutBgLabel: "Keep colored-background blocks (columns/callouts)",
@@ -341,6 +360,17 @@
       printModeLabel: "ページの印刷スタイル(@media print)を適用（KDP 推奨）",
       embedImagesLabel: "画像を DOCX に埋め込む（PNG 化）",
       h1PageBreakLabel: "h1 の前で改ページ（KDP 章区切り）",
+      tocEnableLabel: "Word の目次フィールドを挿入する（書名 h1 の直後）",
+      tocTitleLabel: "目次の見出し",
+      tocLevelsLabel: "含める見出しレベル",
+      tocNote: "（本物の目次フィールド。ページ番号は Word 側でフィールド更新すると入る: Ctrl+A → F9、または「目次の更新」）",
+      tocAdded: "目次フィールドを{where}挿入しました（レベル {range}）。ページ番号は Word でフィールド更新すると入ります。",
+      tocAtTop: "文書の先頭に",
+      tocAfterH1: "書名 h1 の直後に",
+      tocNoH1: "h1 が見つからなかったため、目次フィールドは文書の先頭に置きました。",
+      tocBadRange: "目次を挿入しませんでした: 見出しレベル範囲 {from}-{to} が不正です（1〜6 かつ 開始 ≤ 終了）。",
+      tocUnsupported: "目次を挿入しませんでした: この docx.js ビルドに TableOfContents クラスがありません。",
+      tocFail: "目次を挿入しませんでした: {msg}",
       contrastLabel: "本文を黒基調にする（白背景コントラスト）",
       figContrastLabel: "図の低コントラスト色を補正する",
       calloutBgLabel: "背景色付きブロック（コラム）を反映する",
@@ -422,6 +452,17 @@
       printModeLabel: "应用页面的打印样式(@media print)（KDP 推荐）",
       embedImagesLabel: "将图像嵌入 DOCX（转为 PNG）",
       h1PageBreakLabel: "在 h1 前分页（KDP 章节分隔）",
+      tocEnableLabel: "插入 Word 目录域（位于书名 h1 之后）",
+      tocTitleLabel: "目录标题",
+      tocLevelsLabel: "包含的标题级别",
+      tocNote: "（真正的目录域。页码需在 Word 中更新域后显示: Ctrl+A → F9，或「更新目录」）",
+      tocAdded: "已在{where}插入目录域（级别 {range}）。在 Word 中更新域后会显示页码。",
+      tocAtTop: "文档开头",
+      tocAfterH1: "书名 h1 之后",
+      tocNoH1: "未找到 h1，目录域已放在文档开头。",
+      tocBadRange: "未插入目录: 标题级别范围 {from}-{to} 无效（须为 1〜6 且 起始 ≤ 结束）。",
+      tocUnsupported: "未插入目录: 此 docx.js 版本没有 TableOfContents 类。",
+      tocFail: "未插入目录: {msg}",
       contrastLabel: "正文使用黑色以保证对比度（白色背景）",
       figContrastLabel: "修正图中低对比度的颜色",
       calloutBgLabel: "保留带背景色的区块（专栏）",
@@ -511,6 +552,11 @@
     printMode: document.getElementById("printMode"),
     embedImages: document.getElementById("embedImages"),
     h1PageBreak: document.getElementById("h1PageBreak"),
+    tocEnable: document.getElementById("tocEnable"),
+    tocOptRow: document.getElementById("tocOptRow"),
+    tocTitle: document.getElementById("tocTitle"),
+    tocFrom: document.getElementById("tocFrom"),
+    tocTo: document.getElementById("tocTo"),
     forceContrast: document.getElementById("forceContrast"),
     figContrast: document.getElementById("figContrast"),
     calloutBg: document.getElementById("calloutBg"),
@@ -885,6 +931,8 @@
     processContainer(body, out, imgMap, opt);
     if (!out.length) out.push(new D.Paragraph({ style: "BodyText", children: [new D.TextRun(t("noBody"))] }));
 
+    if (els.tocEnable.checked) insertToc(out);
+
     if (ADJ.text) log(t("contrastAdjusted", { n: ADJ.text }));
     if (ADJ.fig) log(t("figAdjusted", { n: ADJ.fig }));
 
@@ -1089,6 +1137,10 @@
     opts.border = { left: { style: D.BorderStyle.SINGLE, size: 12, color: shadeHex(bg, 0.6), space: 6 } };
   }
 
+  // 目次の挿入位置を決めるため h1 段落を覚えておく。docx のオブジェクトに独自プロパティを
+  // 生やすと XML 生成に影響しかねないので、WeakSet で外から印を付ける。
+  const H1_PARAS = new WeakSet();
+
   function makeHeading(el, imgMap, opt) {
     const runs = [];
     gatherInline(el, runs, imgMap, opt, { heading: true });
@@ -1096,7 +1148,38 @@
     const opts = { children: runs, heading: D.HeadingLevel["HEADING_" + lv], alignment: mapAlign(gcs(el).textAlign) };
     if (lv === 1 && els.h1PageBreak.checked) opts.pageBreakBefore = true;
     applyCalloutShading(opts, effectiveBg(el));
-    return new D.Paragraph(opts);
+    const p = new D.Paragraph(opts);
+    if (lv === 1) H1_PARAS.add(p);
+    return p;
+  }
+
+  // ---- 目次フィールド ----
+  // docx 8.5.0 の TableOfContents は sdt の中に fldChar(begin/separate/end) と
+  // instrText 'TOC \h \o "1-3"' を出力する。手書きの箇条書きではなく本物の Word フィールドなので、
+  // Word 側でフィールドを更新すればページ番号とリンクが入る。
+  // 方針: 失敗したら黙って進めない（必ずログに理由を出す）。
+  function insertToc(out) {
+    if (typeof D.TableOfContents !== "function") { log(t("tocUnsupported"), "err"); return; }
+    const from = Math.round(numOr(els.tocFrom.value, NaN));
+    const to = Math.round(numOr(els.tocTo.value, NaN));
+    if (!(from >= 1 && from <= 6 && to >= 1 && to <= 6 && from <= to)) {
+      log(t("tocBadRange", { from: els.tocFrom.value, to: els.tocTo.value }), "err");
+      return;
+    }
+    const range = from + "-" + to;
+    try {
+      const title = (els.tocTitle.value || "").trim();
+      const block = [];
+      if (title) block.push(new D.Paragraph({ style: "TOCHeading", children: [new D.TextRun(title)] }));
+      block.push(new D.TableOfContents(title || "Table of Contents", { hyperlink: true, headingStyleRange: range }));
+      // 書名 h1 の直後。h1 が無ければ文書の先頭。
+      const at = out.findIndex(p => H1_PARAS.has(p));
+      if (at < 0) log(t("tocNoH1"), "warn");
+      out.splice(at < 0 ? 0 : at + 1, 0, ...block);
+      log(t("tocAdded", { range: range, where: at < 0 ? t("tocAtTop") : t("tocAfterH1") }), "ok");
+    } catch (err) {
+      log(t("tocFail", { msg: err && err.message ? err.message : String(err) }), "err");
+    }
   }
 
   function imageRun(el, imgMap, opt) {
@@ -1164,6 +1247,13 @@
   els.calloutBg.addEventListener("change", syncCalloutThreshRow);
   syncCalloutThreshRow();
 
+  // 目次 ON のときだけ目次の詳細設定を表示
+  function syncTocOptRow() {
+    els.tocOptRow.style.display = els.tocEnable.checked ? "flex" : "none";
+  }
+  els.tocEnable.addEventListener("change", syncTocOptRow);
+  syncTocOptRow();
+
   // ---- 単位切替（inch ⇔ mm）----
   const UNIT_FIELDS = ["trimW", "trimH", "mTop", "mBottom", "mInside", "mOutside", "mGutter"];
   let prevUnit = "in";
@@ -1223,6 +1313,11 @@
         { id: "Caption", name: "Caption", basedOn: "Normal", next: "BodyText", quickFormat: true,
           run: { italics: true, size: 18, color: "333333", font: f },
           paragraph: { alignment: D.AlignmentType.CENTER, spacing: { before: 60, after: 200 } } },
+        // 目次の見出し。Heading 1 にすると目次フィールド(\o "1-3")が自分自身を拾ってしまうため、
+        // 見た目だけ h1 相当にして Normal 基準(アウトラインレベルは本文)のままにする。
+        { id: "TOCHeading", name: "TOC Heading", basedOn: "Normal", next: "BodyText", quickFormat: true,
+          run: { size: 32, bold: true, color: "000000", font: f },
+          paragraph: { keepNext: true, spacing: { before: 360, after: 160 } } },
       ],
     };
   }
