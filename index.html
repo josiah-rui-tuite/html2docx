@@ -382,6 +382,8 @@
       splitDupSlug: "duplicate slug (file names would collide): {slugs}",
       splitCarried: "unclosed tags remain after the last chapter: {tags}",
       splitTailFail: "cannot locate the frame tail: the opening tags {tags} left by the frame head are not closed in that order at the end. Check by hand.",
+      splitTailHeading: "the frame tail contains a heading (h1-h6); tail_start was fixed too early and swallowed chapter body. Check by hand.",
+      splitTailText: "the frame tail still contains body-like text: {text}. tail_start was likely fixed too early (e.g. a stray </div>) and swallowed following body. Check by hand.",
       splitRoundtripFail: "round-trip failed (join(split) != source); the split cannot be trusted, so nothing was written.",
       splitDirWritten: "Wrote {n} files to folder \"{name}\".",
       splitZipNote: "Folder writing not supported by this browser; downloading book.zip instead.",
@@ -564,6 +566,8 @@
       splitDupSlug: "slug が重複しています（ファイル名が衝突します）: {slugs}",
       splitCarried: "最終章のあとに閉じ残しがあります: {tags}",
       splitTailFail: "本体の閉じを特定できません。frame_head が開いたタグ {tags} を、末尾がその順で閉じていません。手で確認してください。",
+      splitTailHeading: "frame の閉じの中に見出し（h1〜h6）が混ざっています。tail_start を早期確定し章本文を飲み込んだ疑いです。手で確認してください。",
+      splitTailText: "frame の閉じの中に本文らしきテキストが残っています: {text}。最終章の途中で tail を早期確定し後続の本文を飲み込んだ疑いです（迷子の </div> 等）。手で確認してください。",
       splitRoundtripFail: "往復一致に失敗しました（join(split) != 原文）。分割結果は信用できないため、何も書き出していません。",
       splitDirWritten: "フォルダ「{name}」へ {n} ファイルを書き出しました。",
       splitZipNote: "このブラウザはフォルダ書き込みに未対応のため、代わりに book.zip をダウンロードします。",
@@ -745,6 +749,8 @@
       splitDupSlug: "slug 重复（文件名会冲突）: {slugs}",
       splitCarried: "最后一章之后仍有未闭合标签: {tags}",
       splitTailFail: "无法定位框架尾部: frame_head 打开的标签 {tags} 未在末尾按该顺序闭合。请手动检查。",
+      splitTailHeading: "框架尾部包含标题（h1-h6）。tail_start 过早确定，疑似吞入章节正文。请手动检查。",
+      splitTailText: "框架尾部仍有类似正文的文本: {text}。疑似过早确定 tail_start（如多余的 </div>）并吞入后续正文。请手动检查。",
       splitRoundtripFail: "往返一致失败（join(split) != 原文）。拆分结果不可信，未写入任何文件。",
       splitDirWritten: "已向文件夹「{name}」写入 {n} 个文件。",
       splitZipNote: "此浏览器不支持写入文件夹，改为下载 book.zip。",
@@ -1199,6 +1205,10 @@
   const HB_COMMENT_RE = /<!--[\s\S]*?-->/g;
   const HB_NONCONTENT_RE = /<(header|nav|footer)\b[\s\S]*?<\/\1\s*>/gi;
   const HB_CHAPTER_RE = /<(h[12])\b[^>]*>/gi;
+  // frame_tail の「本文飲み込み」検査用。見出しは h1〜h6、<button> は装飾なので除く。
+  const HB_HEADING_RE = /<h[1-6]\b[^>]*>/i;
+  const HB_BUTTON_RE = /<button\b[\s\S]*?<\/button\s*>/gi;
+  const HB_TAGSTRIP_RE = /<[^>]+>/g;
   const HB_ID_RE = /\bid="([^"]+)"/;
   const HB_WRAP_ID_RE = /<(?:div|section)\b[^>]*\bid="([^"]+)"[^>]*>/gi;
   const HB_VOID = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input",
@@ -1304,17 +1314,65 @@
     }
     return stray;
   }
-  function hbFindTail(src, after, frameOpens) {
-    let pat = "";
-    for (let i = frameOpens.length - 1; i >= 0; i--) {
-      pat += "(?:\\s|<script\\b[^>]*>[\\s\\S]*?</script\\s*>)*</" + reEsc(frameOpens[i]) + "\\s*>";
+  function hbCarriedBeforeLast(src, starts) {
+    // htmlbook.py の carried_before_last と同一。最終章に入る時点で章をまたいで
+    // 開いたままのタグ列。split_book の carried ループと同じ2操作で組む。
+    const carried = [];
+    for (let i = 0; i < starts.length - 1; i++) {
+      const body = src.slice(starts[i], starts[i + 1]);
+      for (const t of hbUnopenedCloses(body)) { const k = carried.indexOf(t); if (k >= 0) carried.splice(k, 1); }
+      for (const t of hbOpenStack(body)) carried.push(t);
     }
-    pat += "\\s*$";
-    const re = new RegExp(pat, "gi");
-    re.lastIndex = after;
-    const mm = re.exec(src);
-    if (!mm) throw new Error(t("splitTailFail", { tags: frameOpens.join(", ") }));
-    return mm.index;
+    return carried;
+  }
+  function hbFindTail(src, masked, starts) {
+    // htmlbook.py の find_tail と同一ロジック（carried による位置ベースの tail 確定）。
+    // 末尾アンカーで「閉じタグの間は空白/script だけ」を要求すると、テンプレ由来の
+    // 枠外装飾（footer.doc-footer / button.totop, 順序・有無は本ごとにばらつく）が
+    // </div> と </body> の間に挟まった実ファイルで連続照合が切れて中断する。
+    // tailStart は「最終章の本文が終わり frame の閉じが始まる点」で carried で一意に
+    // 決まる。最終章の本文は carried（章をまたいで開いたタグ）をちょうど閉じ、それ以外は
+    // 自己完結する。最終章の先頭から走査し、本文でも carried でもないタグ（＝frame 自身の
+    // 容器）を最初に閉じる位置を tailStart とする。frame 容器は tag 名だけでは章要素と
+    // 区別できない（同じ div でも div.layout は frame, div.part-divider は章）ため、
+    // 名前でなく carried による要素単位の対応で決める。
+    const remaining = hbCarriedBeforeLast(src, starts);
+    const after = starts[starts.length - 1];
+    const bstack = [];
+    let tailStart = null;
+    for (const mm of masked.slice(after).matchAll(HB_TAG_RE)) {
+      const closing = mm[1], tag = mm[2].toLowerCase(), self = mm[3];
+      if (HB_VOID.has(tag) || self) continue;
+      if (!closing) { bstack.push(tag); continue; }
+      if (bstack.includes(tag)) {            // 本文が自分で開いたタグの閉じ
+        while (bstack.length && bstack.pop() !== tag) { /* rewind */ }
+      } else {
+        const k = remaining.indexOf(tag);
+        if (k >= 0) { remaining.splice(k, 1); }  // carried タグの閉じ
+        else { tailStart = after + mm.index; break; }  // frame 容器の閉じ
+      }
+    }
+    if (tailStart === null) throw new Error(t("splitTailFail", { tags: "body, html" }));
+    if (remaining.length) throw new Error(t("splitTailFail", { tags: remaining.join(", ") }));
+    // 位置を確定したうえで、壊れると困る不変条件だけ検査する。入力HTMLが厳密に
+    // 閉じ整合でない実本もある（実測 knowledge_graph: </div> が2つ余分）ので open_stack
+    // ベースの厳密な逆順一致は課さない（課すと従来通っていた本を落とす）。tail 自身が
+    // 何も開きっぱなしにしないこと・章見出しを含まないこと（章を丸ごと飲み込む最大の
+    // 破壊を防ぐ）・文書末 </html> に至ることを見る。tail_start は carried で一意に固定。
+    const frameTail = src.slice(tailStart);
+    const closes = hbUnopenedCloses(frameTail);
+    if (hbOpenStack(frameTail).length || !closes.length || closes[closes.length - 1] !== "html") {
+      throw new Error(t("splitTailFail", { tags: closes.join(", ") }));
+    }
+    // 章飲み込みの直接検査（往復一致と独立）。装飾（mask で消える footer/nav/header・
+    // svg/pre/script/style・コメント、および対話部品 button）を除くと、正しい frame_tail
+    // には可視テキストが1文字も残らない（実測10冊）。残れば迷子の </div> 等で tail を
+    // 早期確定し実本文を飲み込んだ疑い。見出しは h1〜h6 を弾く。
+    const maskedTail = hbMask(frameTail);
+    if (HB_HEADING_RE.test(maskedTail)) throw new Error(t("splitTailHeading"));
+    const residual = maskedTail.replace(HB_BUTTON_RE, " ").replace(HB_TAGSTRIP_RE, " ").trim();
+    if (residual) throw new Error(t("splitTailText", { text: residual.slice(0, 80) }));
+    return tailStart;
   }
   function hbElemEnd(masked, start, tag) {
     let depth = 0;
@@ -1351,8 +1409,7 @@
     }
     const starts = bounds.map(b => b.start);
     const frameHead = src.slice(0, starts[0]);
-    const frameOpens = hbOpenStack(frameHead);
-    const tailStart = hbFindTail(src, starts[starts.length - 1], frameOpens);
+    const tailStart = hbFindTail(src, masked, starts);
     const frameTail = src.slice(tailStart);
     const chapters = [];
     for (let i = 0; i < heads.length; i++) {
