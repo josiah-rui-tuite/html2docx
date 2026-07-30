@@ -317,6 +317,12 @@
         <span class="muted" id="joinName" data-i18n="joinNone">No folder selected</span>
       </div>
         <p class="muted" data-i18n="joinNote">(Pick the <code>book/</code> folder produced by <code>htmlbook.py split</code>. The chapters are reassembled into the single HTML using <code>manifest.json</code> for order. Nothing is written until you press <em>Save as…</em>, which lets you name the file or overwrite the original. The result is also handed to the conversion tab, so you can read it through and convert it without reloading anything. htmlbook.py stays the authority for the archival round-trip; this button is the review loop.)</p>
+      <div class="row">
+        <input type="file" id="specInput" accept=".json,application/json" hidden>
+        <button type="button" class="btn secondary" id="specBtn" data-i18n="msBtn">Choose the layout spec (JSON)</button>
+        <span class="muted" id="specName" data-i18n="msNone">No spec chosen</span>
+      </div>
+      <p class="muted" data-i18n="msNote">(Second mode of the same button. Chapters that were written standalone — each a complete HTML with its own head and style, openable on its own — have no <code>_frame.html</code> / <code>manifest.json</code>, so the join above cannot read them. Choose the layout spec JSON first, then the chapter folder. The book title, the part pages and the table of contents do not exist in the chapter files; they come from the spec. A table of contents a chapter carries for itself is dropped, so the merged file has exactly one. This is a port of <code>tool/htmlbook/merge_standalone.py</code>, which stays the authority.)</p>
     </div>
   </div>
 
@@ -405,6 +411,35 @@
       joinDownloaded: "Downloaded: {name} (your browser chose the folder)",
       joinSaveCancel: "Save cancelled. The joined document is still held here.",
       joinSaveFail: "Save dialog unavailable ({msg}); falling back to a normal download.",
+      msBtn: "Choose the layout spec (JSON)",
+      msNone: "No spec chosen",
+      msNote: "(Second mode of the same button. Chapters that were written standalone — each a complete HTML with its own head and style, openable on its own — have no _frame.html / manifest.json, so the join above cannot read them. Choose the layout spec JSON first, then the chapter folder. The book title, the part pages and the table of contents do not exist in the chapter files; they come from the spec. A table of contents a chapter carries for itself is dropped, so the merged file has exactly one. This is a port of tool/htmlbook/merge_standalone.py, which stays the authority.)",
+      msPicked: "Spec: {name} ({units} units in {parts} parts).",
+      msSpecBad: "Cannot read the spec: {msg}",
+      msSpecShape: "the spec has no \"{field}\"",
+      msNeedSpec: "This folder has no _frame.html / manifest.json, so it is read as standalone chapter HTML — but no layout spec is loaded. Choose the spec JSON (tool/htmlbook/spec_dt_r07.json) first; the book title and the part structure are not in the chapter files.",
+      msMode: "No _frame.html / manifest.json: merging as standalone chapter HTML (port of merge_standalone.py).",
+      msOk: "Merged {n} units into a single HTML ({chars} chars).",
+      msDropToc: "Dropped the table of contents the chapter files carry for themselves: {units}. Their hrefs point at other files; the merged TOC is the one generated from the spec.",
+      msGap: "Declared gap: {gap}",
+      msNewline: "Newlines are written as LF. merge_standalone.py writes CRLF on Windows, so normalise newlines before comparing the two outputs.",
+      msExtra: "chapter HTML in the folder that the spec does not list: {files}. Write their order into the spec (they will not be silently dropped).",
+      msMissing: "chapter file is missing: {file}",
+      msStyle: "{file}: {n} <style> in the head (expected exactly 1)",
+      msNoBody: "{file}: no <body>",
+      msWrap: "{file}: {n} <div class=\"wrap\"> (expected exactly 1)",
+      msDivAsym: "{file}: unbalanced div inside .wrap (<div>={o} </div>={c})",
+      msTail: "{file}: unexpected content after .wrap: {tail}",
+      msEmpty: "{file}: .wrap is empty",
+      msTocDiv: "{file}: dropping the TOC left the divs unbalanced ({o}/{c})",
+      msTocEmpty: "{file}: dropping the TOC emptied the chapter",
+      msNoHeading: "{uid}: no heading to put in the table of contents",
+      msVerbatim: "{uid}: the .wrap content is not in the output verbatim",
+      msCssVerbatim: "{uid}: the <style> is not in the output verbatim",
+      msOrder: "{uid}: the chapter order disagrees with the spec",
+      msTagLost: "<{tag}> lost: {src} across the chapters -> {got} in the output",
+      msTagAsym: "<{tag}> unbalanced: {o} open / {c} close",
+      msDupId: "duplicate id: {ids}",
       chooseFile: "Choose HTML file",
       noFileChosen: "No file selected",
       fileHint: "Select an HTML file.",
@@ -590,6 +625,35 @@
       joinDownloaded: "ダウンロードしました: {name}（保存先はブラウザ任せ）",
       joinSaveCancel: "保存を取り消しました。結合結果はまだ保持しています。",
       joinSaveFail: "保存ダイアログを使えませんでした（{msg}）。通常のダウンロードに切り替えます。",
+      msBtn: "構成定義（JSON）を選択",
+      msNone: "構成定義 未選択",
+      msNote: "（同じボタンのもう一つの流儀です。最初から章ごとに独立して書かれた章別HTML——それぞれ独自の head と style を持ち、単体でブラウザに開けるもの——は _frame.html / manifest.json を持たないので、上の結合では1本も読めません。先に構成定義 JSON を選び、次に章別HTMLのフォルダを選びます。書名・部扉・目次は章別HTMLに無いので構成定義から差し込みます。章が自前で持つ目次は外すので、統合版の目次は1つだけになります。tool/htmlbook/merge_standalone.py の移植で、権威は Python 側のままです）",
+      msPicked: "構成定義を読みました: {name}（{parts} 部 / {units} 章）",
+      msSpecBad: "構成定義が読めません: {msg}",
+      msSpecShape: "構成定義に \"{field}\" がありません",
+      msNeedSpec: "このフォルダは _frame.html / manifest.json を持たないので、独立した章別HTMLとして結合します。ただし構成定義が読み込まれていません。先に構成定義 JSON（tool/htmlbook/spec_dt_r07.json）を選んでください（書名と部構成は章別HTMLに無いためです）。",
+      msMode: "_frame.html / manifest.json が無いので、独立した章別HTMLとして結合します（merge_standalone.py の移植）。",
+      msOk: "{n} 章を単一HTMLに結合しました（{chars} 字）。",
+      msDropToc: "章別HTMLが自前で持つ目次を統合から外しました: {units}（別ファイルを指す href のためです。目次は構成定義から生成した分を使います）",
+      msGap: "欠落（構成定義の申告）: {gap}",
+      msNewline: "改行は LF で書き出します。merge_standalone.py は Windows で CRLF を書くので、二つの出力を比べるときは改行を揃えてください。",
+      msExtra: "構成定義に無い章別HTMLがフォルダにあります: {files}。黙って捨てないので、構成定義に順序を書いてください。",
+      msMissing: "章ファイルがありません: {file}",
+      msStyle: "{file}: head の <style> が {n} 個あります（1個であるべき）",
+      msNoBody: "{file}: <body> がありません",
+      msWrap: "{file}: <div class=\"wrap\"> が {n} 個あります（1個であるべき）",
+      msDivAsym: "{file}: .wrap 内の div が非対称です（<div>={o} </div>={c}）",
+      msTail: "{file}: .wrap の後ろに想定外の内容があります: {tail}",
+      msEmpty: "{file}: .wrap の中身が空です",
+      msTocDiv: "{file}: 目次を外したら div が非対称になりました（{o}/{c}）",
+      msTocEmpty: "{file}: 目次を外したら中身が空になりました",
+      msNoHeading: "{uid}: 目次に載せる見出しが見つかりません",
+      msVerbatim: "{uid}: .wrap の中身が出力に verbatim で入っていません",
+      msCssVerbatim: "{uid}: <style> が出力に verbatim で入っていません",
+      msOrder: "{uid}: 章の並びが構成定義と食い違います",
+      msTagLost: "<{tag}> が減りました: 章別合計 {src} → 出力 {got}",
+      msTagAsym: "<{tag}> が非対称です: 開き {o} / 閉じ {c}",
+      msDupId: "id が重複しています: {ids}",
       chooseFile: "HTML ファイルを選択",
       noFileChosen: "ファイル未選択",
       fileHint: "HTML ファイルを選択してください。",
@@ -774,6 +838,35 @@
       joinDownloaded: "已下载: {name}（保存位置由浏览器决定）",
       joinSaveCancel: "已取消保存。合并结果仍保留在此。",
       joinSaveFail: "无法使用保存对话框（{msg}），改为普通下载。",
+      msBtn: "选择章节构成定义（JSON）",
+      msNone: "未选择构成定义",
+      msNote: "（同一按钮的另一种模式。从一开始就按章独立撰写的章节 HTML——各自带有 head 与 style、可单独打开——没有 _frame.html / manifest.json，因此上面的合并一本也读不了。请先选择构成定义 JSON，再选择章节文件夹。书名、部扉与目录并不存在于章节文件中，由构成定义提供。章节自带的目录会被去掉，因此合并后的文件只有一个目录。本功能是 tool/htmlbook/merge_standalone.py 的移植，权威仍在 Python 一侧）",
+      msPicked: "已读取构成定义: {name}（{parts} 部 / {units} 章）",
+      msSpecBad: "无法读取构成定义: {msg}",
+      msSpecShape: "构成定义中没有 \"{field}\"",
+      msNeedSpec: "该文件夹没有 _frame.html / manifest.json，因此按独立章节 HTML 合并，但尚未载入构成定义。请先选择构成定义 JSON（tool/htmlbook/spec_dt_r07.json）——书名与部结构不在章节文件中。",
+      msMode: "没有 _frame.html / manifest.json，按独立章节 HTML 合并（merge_standalone.py 的移植）。",
+      msOk: "已将 {n} 章合并为单一 HTML（{chars} 字）。",
+      msDropToc: "已去掉章节自带的目录: {units}（其 href 指向别的文件；合并后的目录使用由构成定义生成的那一份）",
+      msGap: "构成定义申报的缺失: {gap}",
+      msNewline: "换行以 LF 写出。merge_standalone.py 在 Windows 上写 CRLF，比较两者输出前请先统一换行。",
+      msExtra: "文件夹中存在构成定义未列出的章节 HTML: {files}。不会静默丢弃，请把顺序写进构成定义。",
+      msMissing: "缺少章节文件: {file}",
+      msStyle: "{file}: head 中有 {n} 个 <style>（应为 1 个）",
+      msNoBody: "{file}: 没有 <body>",
+      msWrap: "{file}: 有 {n} 个 <div class=\"wrap\">（应为 1 个）",
+      msDivAsym: "{file}: .wrap 内的 div 不对称（<div>={o} </div>={c}）",
+      msTail: "{file}: .wrap 之后有意料之外的内容: {tail}",
+      msEmpty: "{file}: .wrap 内容为空",
+      msTocDiv: "{file}: 去掉目录后 div 变得不对称（{o}/{c}）",
+      msTocEmpty: "{file}: 去掉目录后内容为空",
+      msNoHeading: "{uid}: 找不到可放入目录的标题",
+      msVerbatim: "{uid}: .wrap 的内容没有原样出现在输出中",
+      msCssVerbatim: "{uid}: <style> 没有原样出现在输出中",
+      msOrder: "{uid}: 章节顺序与构成定义不一致",
+      msTagLost: "<{tag}> 减少了: 各章合计 {src} → 输出 {got}",
+      msTagAsym: "<{tag}> 不对称: 开 {o} / 闭 {c}",
+      msDupId: "id 重复: {ids}",
       chooseFile: "选择 HTML 文件",
       noFileChosen: "未选择文件",
       fileHint: "请选择一个 HTML 文件。",
@@ -923,6 +1016,9 @@
     joinBtn: document.getElementById("joinBtn"),
     joinSaveBtn: document.getElementById("joinSaveBtn"),
     joinName: document.getElementById("joinName"),
+    specBtn: document.getElementById("specBtn"),
+    specInput: document.getElementById("specInput"),
+    specName: document.getElementById("specName"),
     splitFileInput: document.getElementById("splitFileInput"),
     splitBtn: document.getElementById("splitBtn"),
     splitSaveBtn: document.getElementById("splitSaveBtn"),
@@ -1033,7 +1129,7 @@
   function applyLang() {
     document.querySelectorAll("[data-i18n]").forEach(el => {
       if (el === els.log && els.log.dataset.init === "1") return; // ログ本文は上書きしない
-      if ((el === els.fileInfo || el === els.fileName) && el.dataset.dynamic === "1") return; // 動的セット済みは維持
+      if (el.dataset.dynamic === "1") return; // 動的セット済み（選んだファイル名など）は維持
       el.textContent = t(el.getAttribute("data-i18n"));
     });
     document.querySelectorAll("[data-i18n-title]").forEach(el => { el.title = t(el.getAttribute("data-i18n-title")); });
@@ -1182,8 +1278,15 @@
       const flat = files.filter(f => (f.webkitRelativePath || f.name).split("/").length === depth);
       const byName = {};
       for (const f of flat) byName[f.name] = await readExact(f);
-      if (byName["_frame.html"] === undefined) throw new Error(t("joinNoFrame"));
-      if (byName["manifest.json"] === undefined) throw new Error(t("joinNoManifest"));
+      // 二つの流儀を取り違えないよう、フォルダの中身で分ける。_frame.html /
+      // manifest.json があれば htmlbook の join、どちらも無ければ「最初から独立して
+      // 書かれた章別HTML」の結合（下の msRun）。片方だけ有るのは壊れた book/ なので、
+      // 独立章とみなして黙って別処理へ流さず、これまでどおり中止する。
+      const hasFrame = byName["_frame.html"] !== undefined;
+      const hasManifest = byName["manifest.json"] !== undefined;
+      if (!hasFrame && !hasManifest) { await msRun(byName); return; }
+      if (!hasFrame) throw new Error(t("joinNoFrame"));
+      if (!hasManifest) throw new Error(t("joinNoManifest"));
       const man = JSON.parse(byName["manifest.json"]);
       const { html, deltas } = joinChapters(byName["_frame.html"], man, byName);
 
@@ -1213,6 +1316,363 @@
       e.target.value = "";
     }
   });
+
+  // ================= 独立した章別HTMLの結合 (standalone merge) =================
+  // tool/htmlbook/merge_standalone.py の移植。上の joinChapters とは別物である。
+  // join は「単一HTMLを split した結果」を _frame.html / manifest.json とマーカーを
+  // 頼りに戻すもので、往復一致が不変条件になる。こちらは **最初から章ごとに独立して
+  // 書かれた完全なHTML**（それぞれ独自の <head> と <style> を持ち、単体で開ける）を
+  // 対象にする。元の単一HTMLが存在しないので往復一致は定義できず、代わりに
+  //     各章の <div class="wrap"> の中身が、出力に verbatim（1文字も変えず）で含まれる
+  // を不変条件にする。本文は一切変換しない。作るのは外枠（書名・部扉・目次・ビルド
+  // 注記）と、各章の <style> を束ねた1枚のCSSだけである。
+  //   ・書名／部扉／目次は章別HTMLに無いので、構成定義 JSON から差し込む
+  //   ・章が自前で持つ目次（nav.toc）は外す。href が別ファイルを指すうえ、外さないと
+  //     生成した目次と二つ並ぶ。落としたことは必ず報告する（黙って落とさない）
+  //   ・出力は Python 版とバイト一致する（改行だけ LF。Python は Windows で CRLF）
+  // 権威は merge_standalone.py 側に残す。ここは推敲ループ用。
+  // ---8<--- standalone-merge:begin （node で Python 版と突き合わせるため切り出す範囲）
+  const MS_WRAP_OPEN = '<div class="wrap">';
+  const MS_STYLE_RE = /<style[^>]*>([\s\S]*?)<\/style>/g;
+  const MS_UNIT_TOC_RE = /\n?<nav class="toc">[\s\S]*?<\/nav>\n?/g;
+  const MS_SCAFFOLD_CSS = `
+/* ==== merge_standalone.py が足した外枠。章別HTMLには無い ==== */
+h1.booktitle{font-size:1.9rem; line-height:1.45; margin:8px 0 4px; letter-spacing:.01em}
+p.booksub{font-size:1.02rem; color:var(--muted); margin:0 0 28px}
+h1.part{
+  font-size:1.55rem; margin:78px 0 26px; padding:22px 20px;
+  border:1px solid var(--border); border-left:6px solid var(--accent2);
+  border-radius:10px; background:var(--panel); line-height:1.45;
+}
+h1.part .partsub{display:block; font-size:.95rem; color:var(--muted); margin-top:8px; font-weight:400}
+/* 印刷ボタン（om_r02.html に倣う。押した先は紙かPDFのどちらでもよい） */
+button.print-btn{
+  position:fixed; top:14px; right:16px; z-index:50;
+  background:var(--panel); color:var(--accent2); border:1px solid var(--accent2);
+  border-radius:9px; padding:8px 14px; font-size:.9rem; font-weight:600;
+  cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.28); font-family:inherit;
+}
+button.print-btn:hover{background:var(--accent2); color:var(--panel)}
+/* 目次（om_r02.html の形式に倣う。部の見出しは li.toc-part で平らに並べる） */
+nav.toc{
+  border:1px solid var(--border); border-radius:10px; background:var(--panel);
+  padding:20px 22px; margin:0 0 34px;
+}
+nav.toc h2{font-size:1.1rem; margin:0 0 12px; padding:0; border:0}
+nav.toc ol{list-style:none; margin:0; padding:0}
+nav.toc li{margin:2px 0}
+nav.toc li.toc-part{font-weight:700; color:var(--accent2); margin-top:14px}
+nav.toc a{display:block; padding:3px 8px; border-radius:6px; color:var(--fg); text-decoration:none}
+nav.toc a:hover{color:var(--accent2); background:var(--bg)}
+section.unit{scroll-margin-top:16px}
+div.buildnote{
+  border:1px solid var(--warn); border-radius:10px; background:rgba(251,191,36,.07);
+  padding:16px 18px; margin:0 0 30px; font-size:.9rem; color:var(--muted);
+}
+div.buildnote b{color:var(--warn)}
+div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
+@media print{
+  div.buildnote,button.print-btn{display:none !important}
+  /* 目次は紙にも残す。章別HTML側の \`nav.toc{display:none}\` を上書きするため
+     !important を付ける（intro の @media print がそう書いてある）。 */
+  nav.toc{
+    display:block !important; break-after:page; page-break-after:always;
+    background:#fff !important; border-color:#666 !important; padding:0 !important;
+  }
+  nav.toc h2{color:#111 !important}
+  nav.toc a{color:#111 !important; padding:0 !important}
+  nav.toc li.toc-part{color:#111 !important}
+  h1.part{break-before:page; page-break-before:always; background:#fff !important;
+          border-color:#666 !important; color:#111 !important}
+  h1.booktitle{color:#111 !important}
+}
+`;
+
+  function msCount(s, re) { re.lastIndex = 0; return (s.match(re) || []).length; }
+  function msEsc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function msTagRe(open, tag) { return new RegExp(open ? "<" + tag + "\\b" : "</" + tag + ">", "g"); }
+
+  // 章別HTMLから (CSS, .wrap の中身) を取り出す。どちらか一方でも一意に決まらな
+  // ければ中止する。黙って空を返すと、統合後に章が丸ごと消えていても検査に映らない。
+  function msReadUnit(name, text) {
+    const cut = text.indexOf("<body>");
+    if (cut < 0) throw new Error(t("msNoBody", { file: name }));
+    const head = text.slice(0, cut), body = text.slice(cut + "<body>".length);
+    // <style> は **head の中だけ** を数える。本文の inline SVG が
+    // <defs><style>…</style></defs> を持つことがあり（intro / ch05 / ch07 で実在）、
+    // 文書全体から拾うと図の中の style を「章のCSS」と誤認して止まる。
+    // SVG 内の style は本文と一緒に verbatim で運ばれるので、ここでは触らない。
+    const styles = [];
+    MS_STYLE_RE.lastIndex = 0;
+    let m;
+    while ((m = MS_STYLE_RE.exec(head))) styles.push(m[1]);
+    if (styles.length !== 1) throw new Error(t("msStyle", { file: name, n: styles.length }));
+
+    const nWrap = body.split(MS_WRAP_OPEN).length - 1;
+    if (nWrap !== 1) throw new Error(t("msWrap", { file: name, n: nWrap }));
+    const start = body.indexOf(MS_WRAP_OPEN) + MS_WRAP_OPEN.length;
+    const end = body.lastIndexOf("</div>");
+    const inner = body.slice(start, end);
+
+    const o = msCount(inner, msTagRe(true, "div")), c = msCount(inner, msTagRe(false, "div"));
+    if (o !== c) throw new Error(t("msDivAsym", { file: name, o: o, c: c }));
+
+    const tail = body.slice(end + "</div>".length).trim();
+    if (tail !== "</body>\n</html>" && tail !== "</body></html>") {
+      throw new Error(t("msTail", { file: name, tail: tail.slice(0, 60) }));
+    }
+    if (!inner.trim()) throw new Error(t("msEmpty", { file: name }));
+    return { css: styles[0], inner: inner };
+  }
+
+  // 章別HTMLが自前で持つ目次を統合の対象から外す。「はじめに」は単体で開いたときの
+  // ために目次を持っていて、その <a href> は別ファイル（dt_r07_ch01_cgpt.html#c1 など）
+  // を指す。1本に束ねた側へそのまま持ち込むと、どこへも飛ばない目次が本物と並ぶ。
+  function msDropUnitToc(name, inner) {
+    const dropped = msCount(inner, MS_UNIT_TOC_RE);
+    if (!dropped) return { inner: inner, dropped: 0 };
+    MS_UNIT_TOC_RE.lastIndex = 0;
+    const stripped = inner.replace(MS_UNIT_TOC_RE, "\n");
+    const o = msCount(stripped, msTagRe(true, "div")), c = msCount(stripped, msTagRe(false, "div"));
+    if (o !== c) throw new Error(t("msTocDiv", { file: name, o: o, c: c }));
+    if (!stripped.trim()) throw new Error(t("msTocEmpty", { file: name }));
+    return { inner: stripped, dropped: dropped };
+  }
+
+  // 章ごとの CSS を章順のまま **そのまま連結** する。セレクタ単位で束ね直しては
+  // いけない。章別HTMLは同じセレクタを1ファイル内で2回宣言している（@media print の
+  // h2.chapter,h3 が色と改ページで別々に出る）ので、キーに畳むと先の宣言が黙って消える。
+  // 同じCSSが複数章で共有されていても重複を潰さない。潰すと前後関係が変わり、
+  // どちらが勝つかが元と違いうる。
+  function msMergeCss(order, cssByUnit) {
+    const chunks = [];
+    for (const uid of order) {
+      chunks.push("/* ===== " + uid + " ===== */");
+      chunks.push(cssByUnit[uid].trim());
+    }
+    const distinct = new Set(order.map(u => cssByUnit[u].trim())).size;
+    const note = "各章の <style> を章順にそのまま連結した（" + order.length + "本・うち内容の異なるもの"
+      + distinct + "種）。重複するのは同じ定義が章をまたいで共有されているからで、"
+      + "食い違う定義は後の章のものが勝つ（ブラウザのカスケードのまま）。";
+    return { css: chunks.join("\n"), note: note };
+  }
+
+  function msHeadingText(html, re) {
+    const out = [];
+    re.lastIndex = 0;
+    let m;
+    while ((m = re.exec(html))) out.push(m[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim());
+    return out;
+  }
+
+  // 目次を作る。部の見出しは入れ子の <ol> ではなく li.toc-part として平らに並べる
+  // （入れ子だと紙に落としたときに字下げが深くなり、行が折り返して読みにくい）。
+  function msBuildToc(spec, units) {
+    const lines = ['<nav class="toc" aria-label="目次">', "<h2>目次</h2>", "<ol>"];
+    for (const part of spec.parts) {
+      lines.push('<li class="toc-part">' + msEsc(part.title) + "</li>");
+      for (const uid of part.units) {
+        const inner = units[uid];
+        let titles = msHeadingText(inner, /<h2[^>]*class="chapter"[^>]*>([\s\S]*?)<\/h2>/g);
+        if (!titles.length) titles = msHeadingText(inner, /<h1[^>]*class="matter"[^>]*>([\s\S]*?)<\/h1>/g);
+        if (!titles.length) throw new Error(t("msNoHeading", { uid: uid }));
+        if (titles.length === 1) {
+          lines.push('<li><a href="#u-' + uid + '">' + msEsc(titles[0]) + "</a></li>");
+        } else {
+          // 後付のように、1ファイルへ複数の h1.matter が並ぶ場合
+          const anchors = [];
+          const are = /<h1[^>]*class="matter"[^>]*id="([^"]+)"/g;
+          let a;
+          while ((a = are.exec(inner))) anchors.push(a[1]);
+          titles.forEach((title, i) => {
+            const anc = anchors[i];
+            lines.push('<li><a href="' + (anc ? "#" + anc : "#u-" + uid) + '">' + msEsc(title) + "</a></li>");
+          });
+        }
+      }
+    }
+    lines.push("</ol>", "</nav>");
+    return lines.join("\n");
+  }
+
+  function msBuildNote(spec, nUnits, cssNote) {
+    const items = [
+      "章別HTML " + nUnits + " 本を <code>tool/htmlbook/merge_standalone.py</code>"
+        + "（同じ手順の移植として <code>tool/html2docx</code> の結合タブ）で束ねた生成物である。"
+        + "直すのは章別HTML（<code>digital_thread/ch/</code>）で、このファイルではない。次回の統合が上書きする。",
+      "書名・部扉・この目次は章別HTMLに無いので、章構成の定義から差し込んだ。本文ではない。",
+    ];
+    for (const gap of (spec.gaps || [])) items.push("<b>欠落</b>: " + msEsc(gap));
+    items.push(msEsc(cssNote));
+    const lis = items.map(x => "<li>" + x + "</li>").join("\n");
+    return '<div class="buildnote"><b>ビルド注記（印刷時は出ない）</b>\n<ul>\n' + lis + "\n</ul>\n</div>";
+  }
+
+  // 不変条件を確かめる。1つでも破れたら投げる（書き出す前に走らせる）。
+  function msVerify(outHtml, order, units, cssByUnit) {
+    const report = [];
+    for (const uid of order) {
+      if (outHtml.indexOf(units[uid]) < 0) throw new Error(t("msVerbatim", { uid: uid }));
+    }
+    report.push("本文の verbatim 包含: " + order.length + "/" + order.length + " 章");
+
+    for (const uid of order) {
+      if (outHtml.indexOf(cssByUnit[uid].trim()) < 0) throw new Error(t("msCssVerbatim", { uid: uid }));
+    }
+    report.push("CSS の verbatim 包含: " + order.length + "/" + order.length + " 章");
+
+    let pos = -1;
+    for (const uid of order) {
+      const p = outHtml.indexOf(units[uid]);
+      if (p <= pos) throw new Error(t("msOrder", { uid: uid }));
+      pos = p;
+    }
+    report.push("章の並び: 構成定義のとおり");
+
+    const body = outHtml.slice(outHtml.indexOf("<body>") + "<body>".length);
+    for (const tag of ["h2", "h3", "h4", "svg", "pre", "table", "figure", "li", "img"]) {
+      let src = 0;
+      for (const uid of order) src += msCount(units[uid], msTagRe(true, tag));
+      const got = msCount(body, msTagRe(true, tag));
+      if (got < src) throw new Error(t("msTagLost", { tag: tag, src: src, got: got }));
+      report.push("<" + tag + ">: " + src + " → " + got + (got === src ? "" : "（外枠の分だけ増）"));
+    }
+
+    for (const tag of ["div", "section", "p"]) {
+      const o = msCount(outHtml, msTagRe(true, tag)), c = msCount(outHtml, msTagRe(false, tag));
+      if (o !== c) throw new Error(t("msTagAsym", { tag: tag, o: o, c: c }));
+    }
+    report.push("div / section / p の開閉: 対称");
+
+    const ids = [];
+    const ire = /\sid="([^"]+)"/g;
+    let m;
+    while ((m = ire.exec(body))) ids.push(m[1]);
+    const seen = new Set(), dup = new Set();
+    for (const i of ids) { if (seen.has(i)) dup.add(i); seen.add(i); }
+    if (dup.size) throw new Error(t("msDupId", { ids: [...dup].sort().slice(0, 10).join(", ") }));
+    report.push("id: " + ids.length + " 個すべて一意");
+
+    return report;
+  }
+
+  function msMerge(spec, byName) {
+    for (const field of ["title", "subtitle", "units", "parts"]) {
+      if (spec[field] === undefined) throw new Error(t("msSpecShape", { field: field }));
+    }
+    const order = [];
+    for (const part of spec.parts) for (const uid of part.units) order.push(uid);
+
+    // 構成定義を信じて走査するだけだと、手で足した章を黙って捨てたうえで
+    // 「結合しました」と報告してしまう。実在ファイルと構成定義を突き合わせる。
+    const listed = new Set(order.map(u => spec.units[u]));
+    const extra = Object.keys(byName).filter(n => /\.html?$/i.test(n) && !listed.has(n)).sort();
+    if (extra.length) throw new Error(t("msExtra", { files: extra.join(", ") }));
+
+    const units = {}, cssByUnit = {}, droppedTocs = [];
+    for (const uid of order) {
+      const fn = spec.units[uid];
+      const text = byName[fn];
+      if (text === undefined) throw new Error(t("msMissing", { file: fn }));
+      const u = msReadUnit(fn, text);
+      const d = msDropUnitToc(fn, u.inner);
+      if (d.dropped) droppedTocs.push(uid + "（" + d.dropped + " 本）");
+      units[uid] = d.inner;
+      cssByUnit[uid] = u.css;
+    }
+
+    const merged = msMergeCss(order, cssByUnit);
+    const toc = msBuildToc(spec, units);
+    const note = msBuildNote(spec, order.length, merged.note);
+
+    const chunks = [
+      "<!DOCTYPE html>",
+      '<html lang="ja">',
+      "<head>",
+      '<meta charset="utf-8">',
+      '<meta name="viewport" content="width=device-width, initial-scale=1">',
+      "<title>" + msEsc(spec.title) + "</title>",
+      "<!-- 生成物。編集しない。直すのは digital_thread/ch/*.html。 -->",
+      "<style>",
+      merged.css,
+      MS_SCAFFOLD_CSS,
+      "</style>",
+      "</head>",
+      "<body>",
+      '<button class="print-btn" onclick="window.print()">🖨 印刷 / PDF</button>',
+      '<div class="wrap">',
+      '<h1 class="booktitle">' + msEsc(spec.title) + "</h1>",
+      '<p class="booksub">' + msEsc(spec.subtitle) + "</p>",
+      note,
+      toc,
+    ];
+    for (const part of spec.parts) {
+      const sub = part.subtitle || "";
+      const subhtml = sub ? '<span class="partsub">' + msEsc(sub) + "</span>" : "";
+      chunks.push('<h1 class="part" id="' + part.id + '">' + msEsc(part.title) + subhtml + "</h1>");
+      for (const uid of part.units) {
+        chunks.push('<section class="unit" id="u-' + uid + '">');
+        chunks.push(units[uid]);
+        chunks.push("</section>");
+      }
+    }
+    chunks.push("</div>", "</body>", "</html>", "");
+
+    const html = chunks.join("\n");
+    const report = msVerify(html, order, units, cssByUnit);
+    return { html: html, report: report, dropped: droppedTocs, order: order, cssNote: merged.note };
+  }
+  // ---8<--- standalone-merge:end
+
+  let MS_SPEC = null;
+
+  els.specBtn.addEventListener("click", () => els.specInput.click());
+  els.specInput.addEventListener("change", async (e) => {
+    const f = (e.target.files || [])[0];
+    if (!f) return;
+    try {
+      const spec = JSON.parse(await readExact(f));
+      if (!spec.parts || !spec.units) throw new Error("parts / units");
+      const n = spec.parts.reduce((a, p) => a + p.units.length, 0);
+      MS_SPEC = spec;
+      els.specName.dataset.dynamic = "1";
+      els.specName.textContent = f.name;
+      log(t("msPicked", { name: f.name, parts: spec.parts.length, units: n }), "ok");
+    } catch (err) {
+      MS_SPEC = null;
+      els.specName.dataset.dynamic = "1";
+      els.specName.textContent = t("msNone");
+      log(t("msSpecBad", { msg: err.message }), "err");
+    } finally {
+      e.target.value = "";
+    }
+  });
+
+  async function msRun(byName) {
+    if (!MS_SPEC) throw new Error(t("msNeedSpec"));
+    log(t("msMode"));
+    // Python の universal newlines に合わせて LF へ揃える（章別HTMLは CRLF と LF が
+    // 混ざっている）。揃えないと同じ原稿から出た二つの出力が改行だけで食い違う。
+    const norm = {};
+    for (const k of Object.keys(byName)) norm[k] = byName[k].replace(/\r\n?/g, "\n");
+    const r = msMerge(MS_SPEC, norm);
+    log(t("msOk", { n: r.order.length, chars: cpLength(r.html) }), "ok");
+    for (const line of r.report) log("  ok  " + line);
+    log("  css " + r.cssNote);
+    if (r.dropped.length) log(t("msDropToc", { units: r.dropped.join(" / ") }), "ok");
+    for (const g of (MS_SPEC.gaps || [])) log(t("msGap", { gap: g }), "warn");
+    log(t("msNewline"));
+    // 勝手に保存せず、保存先はユーザに決めさせる（joinSaveBtn と同じ扱い）。
+    const name = String(MS_SPEC.out || "merged.html").split(/[\\/]/).pop();
+    JOINED = { html: r.html, name: name };
+    els.joinSaveBtn.disabled = false;
+    els.joinName.dataset.dynamic = "1";
+    els.joinName.textContent = name;
+    els.fileName.dataset.dynamic = "1";
+    els.fileName.textContent = name;
+    loadIntoStage(r.html, name);
+    log(t("joinLoaded"), "ok");
+  }
 
   // ================= 単一HTMLの分解 (split) =================
   // tool/htmlbook/htmlbook.py の split_book / cmd_split / standalone を移植したもの。
