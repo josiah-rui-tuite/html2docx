@@ -349,6 +349,14 @@
         <button type="button" class="btn secondary" id="specBtn" data-i18n="msBtn">Choose the layout spec (JSON)</button>
         <span class="muted" id="specName" data-i18n="msNone">No spec chosen</span>
       </div>
+      <div class="row">
+        <label style="display:flex; align-items:center; gap:6px;"><input type="checkbox" id="msTocEnable" checked> <span data-i18n="msTocEnableLabel">Generate a table of contents</span></label>
+        <span id="msTocPosLabel" data-i18n="msTocPosLabel" style="margin-left:12px">Put it in front of</span>
+        <select id="msTocPos" style="flex:1; min-width:220px; max-width:520px; padding:4px 6px; border:1px solid #ccc; border-radius:6px;">
+          <option value="top" data-i18n="msTocPosTop">The book title (i.e. right after it — the default)</option>
+        </select>
+      </div>
+      <p class="muted" data-i18n="msTocNote">(The chapter files carry no table of contents of their own, so this one is built from the spec. The list fills in with the spec's parts and units once you choose the spec. Turn this off if the reading-order TOC should come from the EPUB / DOCX side instead — those build their own from the headings, and two of them in one book is one too many.)</p>
       <p class="muted" data-i18n="msNote">(Second mode of the same button. Chapters that were written standalone — each a complete HTML with its own head and style, openable on its own — have no <code>_frame.html</code> / <code>manifest.json</code>, so the join above cannot read them. Choose the layout spec JSON first, then the chapter folder. The book title, the part pages and the table of contents do not exist in the chapter files; they come from the spec. A table of contents a chapter carries for itself is dropped, so the merged file has exactly one. This is a port of <code>tool/htmlbook/merge_standalone.py</code>, which stays the authority.)</p>
     </div>
   </div>
@@ -498,7 +506,7 @@
       tocTitleLabel: "TOC heading",
       tocLevelsLabel: "Heading levels",
       tocNote: "(A static, clickable TOC with no page numbers — displays correctly in Kindle/KDP. Headings keep their styles, so Kindle also builds its Go-To navigation.)",
-      tocAdded: "Inserted a hyperlinked TOC (levels {range}) {where}. No page numbers — each entry links to its heading.",
+      tocAdded: "Inserted a hyperlinked TOC into the DOCX (levels {range}) {where}. No page numbers — each entry links to its heading.",
       tocAtTop: "at the top of the document",
       tocPosLabel: "Where to put it",
       tocPosAfterH1: "Right after the title h1 (default)",
@@ -544,6 +552,15 @@
       epubCalloutNone: "Callouts: nothing matched \"{sel}\", so no box was drawn.",
       epubCalloutBad: "Callout selector is invalid: {sel} ({msg})",
       epubExcludeLabel: "Exclude selector",
+      msTocEnableLabel: "Generate a table of contents",
+      msTocPosLabel: "Put it in front of",
+      msTocPosTop: "The book title (i.e. right after it — the default)",
+      msTocPosPart: "part \"{name}\"",
+      msTocPosUnit: "   {uid} ({file})",
+      msTocNote: "(The chapter files carry no table of contents of their own, so this one is built from the spec. The list fills in with the spec's parts and units once you choose the spec. Turn this off if the reading-order TOC should come from the EPUB / DOCX side instead — those build their own from the headings, and two of them in one book is one too many.)",
+      msTocPlaced: "Single-HTML TOC: generated and placed at \"{at}\".",
+      msTocOff: "Single-HTML TOC: not generated (join setting).",
+      msTocPosLost: "The TOC position \"{at}\" is not in the spec, so nothing was written.",
       epubTocDepthLabel: "Heading levels in the TOC",
       epubTocDepthDocx: "Same as the DOCX TOC setting above",
       epubTocDepth1: "h1 only",
@@ -553,16 +570,16 @@
       epubTocDepth5: "h1–h5",
       epubTocDepth6: "h1–h6",
       epubTocDepthNote: "(Applies to both the navigation list Kindle shows in its side panel and the TOC page below. A book whose h1 is the title and h2 the chapters needs h1–h2 at least; picking h1 only would leave a one-line TOC.)",
-      epubTocDepthUsed: "TOC heading levels: h{from}-h{to} ({n} entries).",
+      epubTocDepthUsed: "EPUB TOC heading levels: h{from}-h{to} ({n} entries).",
       epubTocPageLabel: "Add a table-of-contents page to the reading order",
       epubTocPagePosLabel: "Put it in front of",
       epubTocPagePosTop: "The very front",
       epubTocPageNote: "(This is the TOC the reader can page through, and it is separate from the navigation list Kindle shows in its side panel — that one is always generated. The list fills in with the book's h1/h2 once you load a file, so you can drop the TOC right in front of, say, PART I. Entries use the heading levels chosen above. The single HTML is not modified: the page exists only inside the EPUB.)",
-      epubTocPageAdded: "TOC page: {n} entries, placed in front of \"{where}\".",
+      epubTocPageAdded: "EPUB TOC page: {n} entries, placed in front of \"{where}\".",
       epubTocPageTop: "the very front",
-      epubTocPageEmpty: "TOC page: no heading matched h{from}-h{to}, so no page was added.",
-      epubTocPageNoMatch: "TOC page: the chosen heading \"{h}\" is not where a chapter file starts, so the TOC went in front of the chapter that contains it.",
-      epubTocPageLost: "TOC page: the chosen heading \"{h}\" is gone from the book (dropped by the exclude selector?). It was placed at the very front instead.",
+      epubTocPageEmpty: "EPUB TOC page: no heading matched h{from}-h{to}, so no page was added.",
+      epubTocPageNoMatch: "EPUB TOC page: the chosen heading \"{h}\" is not where a chapter file starts, so the TOC went in front of the chapter that contains it.",
+      epubTocPageLost: "EPUB TOC page: the chosen heading \"{h}\" is gone from the book (dropped by the exclude selector?). It was placed at the very front instead.",
       epubExcludeNote: "(On-screen UI — toolbars, print buttons, nav bars — is not part of the book. Anything your print styles hide is dropped automatically; add selectors here for UI that stays visible when printing. Scripts and form controls are always dropped.)",
       uiDropped: "Dropped {n} on-screen element(s) that are not book content (hidden by print styles, form controls, or matched by the exclude selector).",
       excludeBad: "Exclude selector \"{sel}\" is not valid CSS and was ignored ({msg}).",
@@ -741,7 +758,7 @@
       tocTitleLabel: "目次の見出し",
       tocLevelsLabel: "含める見出しレベル",
       tocNote: "（ページ番号なしのクリック可能な目次。Kindle/KDP でそのまま正しく表示されます。見出しは Heading スタイルのままなので、Kindle の「移動」ナビも作られます）",
-      tocAdded: "目次を{where}挿入しました（レベル {range}）。ページ番号なし、各項目は見出しへのリンクです。",
+      tocAdded: "DOCX の目次を{where}挿入しました（レベル {range}）。ページ番号なし、各項目は見出しへのリンクです。",
       tocAtTop: "文書の先頭に",
       tocPosLabel: "目次を置く位置",
       tocPosAfterH1: "書名 h1 の直後（既定）",
@@ -787,6 +804,15 @@
       epubCalloutNone: "囲み: 「{sel}」に一致する要素がありません。枠は付けていません。",
       epubCalloutBad: "囲みのセレクタが不正です: {sel}（{msg}）",
       epubExcludeLabel: "除外セレクタ",
+      msTocEnableLabel: "目次を生成する",
+      msTocPosLabel: "この手前に入れる",
+      msTocPosTop: "書名の直後（既定）",
+      msTocPosPart: "部「{name}」",
+      msTocPosUnit: "　　{uid}（{file}）",
+      msTocNote: "（章別HTMLは目次を持たないので、ここでは章構成の定義から作ります。構成定義を選ぶと、この一覧に部とユニットが並びます。読み順の目次を EPUB / DOCX 側で作る場合はここを OFF にしてください——あちらは見出しから自前で組むので、1冊に2つ入ってしまいます）",
+      msTocPlaced: "単一HTML の目次: 生成して「{at}」に置きました。",
+      msTocOff: "単一HTML の目次: 生成しません（結合の設定）。",
+      msTocPosLost: "目次の位置「{at}」が構成定義にありません。何も書き出していません。",
       epubTocDepthLabel: "目次に入れる見出しレベル",
       epubTocDepthDocx: "上の DOCX 目次の設定に合わせる",
       epubTocDepth1: "h1 のみ",
@@ -796,16 +822,16 @@
       epubTocDepth5: "h5 まで",
       epubTocDepth6: "h6 まで",
       epubTocDepthNote: "（Kindle が左側に出す論理目次と、下の目次ページの両方に効きます。h1 が書名・h2 が章という作りの本では最低でも「h2 まで」が必要です。「h1 のみ」だと目次が1行になります）",
-      epubTocDepthUsed: "目次の見出しレベル: h{from}〜h{to}（{n} 項目）。",
+      epubTocDepthUsed: "EPUB 目次の見出しレベル: h{from}〜h{to}（{n} 項目）。",
       epubTocPageLabel: "読み順に目次ページを入れる",
       epubTocPagePosLabel: "この見出しの手前に入れる",
       epubTocPagePosTop: "いちばん先頭",
       epubTocPageNote: "（読者がページとしてめくれる目次です。Kindle が左側に出す論理目次とは別物で、そちらは常に生成しています。HTML を読み込むと、この一覧に本の h1 / h2 が並ぶので、たとえば PART I の直前を選べます。拾う見出しレベルは上の「目次に入れる見出しレベル」に従います。単一HTML は書き換えません。このページは EPUB の中だけに存在します）",
-      epubTocPageAdded: "目次ページ: {n} 項目を「{where}」の手前に入れました。",
+      epubTocPageAdded: "EPUB の目次ページ: {n} 項目を「{where}」の手前に入れました。",
       epubTocPageTop: "いちばん先頭",
-      epubTocPageEmpty: "目次ページ: h{from}-h{to} に該当する見出しが無いため、入れていません。",
-      epubTocPageNoMatch: "目次ページ: 選んだ見出し「{h}」は章ファイルの先頭ではないため、それを含む章の手前に入れました。",
-      epubTocPageLost: "目次ページ: 選んだ見出し「{h}」が本文に見つかりません（除外セレクタで落ちた可能性）。先頭に入れました。",
+      epubTocPageEmpty: "EPUB の目次ページ: h{from}-h{to} に該当する見出しが無いため、入れていません。",
+      epubTocPageNoMatch: "EPUB の目次ページ: 選んだ見出し「{h}」は章ファイルの先頭ではないため、それを含む章の手前に入れました。",
+      epubTocPageLost: "EPUB の目次ページ: 選んだ見出し「{h}」が本文に見つかりません（除外セレクタで落ちた可能性）。先頭に入れました。",
       epubExcludeNote: "（ツールバー・印刷ボタン・ナビなどの画面用 UI は本の中身ではありません。印刷スタイルで隠れる要素は自動で落とします。印刷しても見えたままの UI はここにセレクタを足してください。スクリプトとフォーム部品は常に落とします）",
       uiDropped: "本文でない画面用要素を {n} 個除外しました（印刷スタイルで非表示・フォーム部品・除外セレクタ該当）。",
       excludeBad: "除外セレクタ「{sel}」が CSS として不正なため無視しました（{msg}）。",
@@ -983,7 +1009,7 @@
       tocTitleLabel: "目录标题",
       tocLevelsLabel: "包含的标题级别",
       tocNote: "（无页码的可点击目录，可在 Kindle/KDP 中正确显示。标题保留其样式，因此 Kindle 也会生成「转到」导航）",
-      tocAdded: "已在{where}插入目录（级别 {range}）。无页码，每项均链接到对应标题。",
+      tocAdded: "已在 DOCX 的{where}插入目录（级别 {range}）。无页码，每项均链接到对应标题。",
       tocAtTop: "文档开头",
       tocPosLabel: "目录位置",
       tocPosAfterH1: "书名 h1 之后（默认）",
@@ -1029,6 +1055,15 @@
       epubCalloutNone: "提示框：没有元素匹配「{sel}」，未加边框。",
       epubCalloutBad: "提示框选择器无效：{sel}（{msg}）",
       epubExcludeLabel: "排除选择器",
+      msTocEnableLabel: "生成目录",
+      msTocPosLabel: "插入到其之前",
+      msTocPosTop: "书名之后（默认）",
+      msTocPosPart: "部「{name}」",
+      msTocPosUnit: "　　{uid}（{file}）",
+      msTocNote: "（章节文件本身不带目录，这里根据结构定义生成。选择结构定义后，此列表会列出各部与各单元。若希望由 EPUB / DOCX 端生成阅读顺序目录，请关闭此项——那边会根据标题自行生成，一本书里出现两个目录就多了一个。）",
+      msTocPlaced: "单一 HTML 的目录：已生成并放置于「{at}」。",
+      msTocOff: "单一 HTML 的目录：不生成（结合设置）。",
+      msTocPosLost: "目录位置「{at}」不在结构定义中，未写出任何内容。",
       epubTocDepthLabel: "目录包含的标题级别",
       epubTocDepthDocx: "沿用上面 DOCX 目录的设置",
       epubTocDepth1: "仅 h1",
@@ -1038,16 +1073,16 @@
       epubTocDepth5: "至 h5",
       epubTocDepth6: "至 h6",
       epubTocDepthNote: "（同时作用于 Kindle 侧边栏的导航目录和下面的目录页。若书中 h1 是书名、h2 是章，至少需要「至 h2」；选「仅 h1」则目录只有一行。）",
-      epubTocDepthUsed: "目录标题级别：h{from}-h{to}（{n} 个条目）。",
+      epubTocDepthUsed: "EPUB 目录标题级别：h{from}-h{to}（{n} 个条目）。",
       epubTocPageLabel: "在阅读顺序中加入目录页",
       epubTocPagePosLabel: "插入到该标题之前",
       epubTocPagePosTop: "最前面",
       epubTocPageNote: "（这是读者可以翻阅的目录页，与 Kindle 侧边栏显示的导航目录不同，后者始终会生成。载入 HTML 后，此列表会列出书中的 h1 / h2，例如可选择 PART I 之前。抓取的标题级别遵循上面的「目录包含的标题级别」设置。单一 HTML 不会被改动，该页仅存在于 EPUB 内）",
-      epubTocPageAdded: "目录页：已加入 {n} 个条目，位置在「{where}」之前。",
+      epubTocPageAdded: "EPUB 目录页：已加入 {n} 个条目，位置在「{where}」之前。",
       epubTocPageTop: "最前面",
-      epubTocPageEmpty: "目录页：没有符合 h{from}-h{to} 的标题，未加入。",
-      epubTocPageNoMatch: "目录页：所选标题「{h}」不是章节文件的开头，已插入到包含它的章节之前。",
-      epubTocPageLost: "目录页：书中找不到所选标题「{h}」（可能被排除选择器剔除），已改为放在最前面。",
+      epubTocPageEmpty: "EPUB 目录页：没有符合 h{from}-h{to} 的标题，未加入。",
+      epubTocPageNoMatch: "EPUB 目录页：所选标题「{h}」不是章节文件的开头，已插入到包含它的章节之前。",
+      epubTocPageLost: "EPUB 目录页：书中找不到所选标题「{h}」（可能被排除选择器剔除），已改为放在最前面。",
       epubExcludeNote: "（工具栏、打印按钮、导航栏等屏幕 UI 不属于书籍内容。被打印样式隐藏的元素会自动剔除；若某些 UI 在打印时仍可见，请在此添加选择器。脚本与表单控件始终剔除）",
       uiDropped: "已排除 {n} 个非正文的屏幕元素（打印样式隐藏、表单控件或匹配排除选择器）。",
       excludeBad: "排除选择器「{sel}」不是有效的 CSS，已忽略（{msg}）。",
@@ -1173,6 +1208,9 @@
     minLongRow: document.getElementById("minLongRow"),
     h1PageBreak: document.getElementById("h1PageBreak"),
     tocEnable: document.getElementById("tocEnable"),
+    msTocEnable: document.getElementById("msTocEnable"),
+    msTocPos: document.getElementById("msTocPos"),
+    msTocPosLabel: document.getElementById("msTocPosLabel"),
     tocPos: document.getElementById("tocPos"),
     tocPosRow: document.getElementById("tocPosRow"),
     tocPosNoteRow: document.getElementById("tocPosNoteRow"),
@@ -1663,12 +1701,14 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
     return lines.join("\n");
   }
 
-  function msBuildNote(spec, nUnits, cssNote) {
+  function msBuildNote(spec, nUnits, cssNote, tocOn) {
     const items = [
       "章別HTML " + nUnits + " 本を <code>tool/html2docx</code> の結合タブ"
         + "（同じ手順の CLI として <code>tool/htmlbook/merge_standalone.py</code>）で束ねた生成物である。"
         + "直すのは章別HTML（<code>digital_thread/ch/</code>）で、このファイルではない。次回の統合が上書きする。",
-      "書名・部扉・この目次は章別HTMLに無いので、章構成の定義から差し込んだ。本文ではない。",
+      tocOn
+        ? "書名・部扉・この目次は章別HTMLに無いので、章構成の定義から差し込んだ。本文ではない。"
+        : "書名・部扉は章別HTMLに無いので、章構成の定義から差し込んだ。本文ではない。目次は生成しない設定で束ねた。",
     ];
     for (const gap of (spec.gaps || [])) items.push("<b>欠落</b>: " + msEsc(gap));
     items.push(msEsc(cssNote));
@@ -1724,7 +1764,12 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
     return report;
   }
 
-  function msMerge(spec, byName) {
+  // opts: { toc: true|false, tocAt: "top" | "part:<id>" | "unit:<uid>" }
+  // 既定（省略時）は従来どおり「目次を作り、書名の直後に置く」。
+  function msMerge(spec, byName, opts) {
+    opts = opts || {};
+    const tocOn = opts.toc !== false;
+    const tocAt = opts.tocAt || "top";
     for (const field of ["title", "subtitle", "units", "parts"]) {
       if (spec[field] === undefined) throw new Error(t("msSpecShape", { field: field }));
     }
@@ -1756,8 +1801,8 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
     }
 
     const merged = msMergeCss(order, cssByUnit);
-    const toc = msBuildToc(spec, units);
-    const note = msBuildNote(spec, order.length, merged.note);
+    const toc = tocOn ? msBuildToc(spec, units) : "";
+    const note = msBuildNote(spec, order.length, merged.note, tocOn);
 
     const chunks = [
       "<!DOCTYPE html>",
@@ -1778,20 +1823,32 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
       '<h1 class="booktitle">' + msEsc(spec.title) + "</h1>",
       '<p class="booksub">' + msEsc(spec.subtitle) + "</p>",
       note,
-      toc,
     ];
+    // 目次の位置。"top" は書名の直後（従来）。部やユニットを指した場合はその手前へ。
+    // 指した先が構成定義に無ければ中止する（目次を黙って落として「統合しました」と
+    // 報告するのが一番まずい）。
+    let tocPlaced = false;
+    const placeToc = at => {
+      if (!tocOn || tocPlaced || tocAt !== at) return;
+      chunks.push(toc);
+      tocPlaced = true;
+    };
+    placeToc("top");
     for (const part of spec.parts) {
+      placeToc("part:" + part.id);
       if (msPartHeading(part)) {
         const sub = part.subtitle || "";
         const subhtml = sub ? '<span class="partsub">' + msEsc(sub) + "</span>" : "";
         chunks.push('<h1 class="part" id="' + part.id + '">' + msEsc(part.title || "") + subhtml + "</h1>");
       }
       for (const uid of part.units) {
+        placeToc("unit:" + uid);
         chunks.push('<section class="unit" id="u-' + uid + '">');
         chunks.push(units[uid]);
         chunks.push("</section>");
       }
     }
+    if (tocOn && !tocPlaced) throw new Error(t("msTocPosLost", { at: tocAt }));
     chunks.push("</div>", "</body>", "</html>", "");
 
     const html = chunks.join("\n");
@@ -1811,6 +1868,7 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
       if (!spec.parts || !spec.units) throw new Error("parts / units");
       const n = spec.parts.reduce((a, p) => a + p.units.length, 0);
       MS_SPEC = spec;
+      fillMsTocPicker(spec);
       els.specName.dataset.dynamic = "1";
       els.specName.textContent = f.name;
       log(t("msPicked", { name: f.name, parts: spec.parts.length, units: n }), "ok");
@@ -1824,6 +1882,35 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
     }
   });
 
+  // 目次の位置の選択肢。章の題は章別HTMLを読むまで分からない（フォルダを選ぶのは後）
+  // ので、構成定義から分かる部の題とユニットIDで並べる。
+  function fillMsTocPicker(spec) {
+    const sel = els.msTocPos;
+    const keep = sel.value;
+    while (sel.options.length > 1) sel.remove(1); // 先頭の「書名の直後」だけ残す
+    for (const part of (spec.parts || [])) {
+      const o = document.createElement("option");
+      o.value = "part:" + part.id;
+      o.textContent = t("msTocPosPart", { name: msPartHeading(part) || part.id });
+      sel.appendChild(o);
+      for (const uid of (part.units || [])) {
+        const u = document.createElement("option");
+        u.value = "unit:" + uid;
+        u.textContent = t("msTocPosUnit", { uid: uid, file: (spec.units || {})[uid] || "?" });
+        sel.appendChild(u);
+      }
+    }
+    sel.value = [...sel.options].some(o => o.value === keep) ? keep : "top";
+  }
+
+  function syncMsTocRow() {
+    const on = els.msTocEnable.checked;
+    els.msTocPos.style.display = on ? "" : "none";
+    els.msTocPosLabel.style.display = on ? "" : "none";
+  }
+  els.msTocEnable.addEventListener("change", syncMsTocRow);
+  syncMsTocRow();
+
   async function msRun(byName) {
     if (!MS_SPEC) throw new Error(t("msNeedSpec"));
     log(t("msMode"));
@@ -1831,8 +1918,13 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
     // 混ざっている）。揃えないと同じ原稿から出た二つの出力が改行だけで食い違う。
     const norm = {};
     for (const k of Object.keys(byName)) norm[k] = byName[k].replace(/\r\n?/g, "\n");
-    const r = msMerge(MS_SPEC, norm);
+    const tocOn = els.msTocEnable.checked;
+    const tocAt = els.msTocPos.value;
+    const r = msMerge(MS_SPEC, norm, { toc: tocOn, tocAt: tocAt });
     log(t("msOk", { n: r.order.length, chars: cpLength(r.html) }), "ok");
+    log(tocOn
+      ? t("msTocPlaced", { at: els.msTocPos.options[els.msTocPos.selectedIndex].textContent.trim() })
+      : t("msTocOff"), "ok");
     for (const line of r.report) log("  ok  " + line);
     log("  css " + r.cssNote);
     if (r.dropped.length) log(t("msDropToc", { units: r.dropped.join(" / ") }), "ok");
