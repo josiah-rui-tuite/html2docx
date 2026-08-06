@@ -192,6 +192,13 @@
         <input type="number" id="tocTo" value="3" min="1" max="6" step="1">
         <span class="muted" data-i18n="tocNote">(A real TOC field. Word fills in the page numbers when the field updates: Ctrl+A → F9, or "Update table")</span>
       </label>
+      <label class="row" id="tocPosRow"><span data-i18n="tocPosLabel">Where to put it</span>
+        <select id="tocPos" style="flex:1; min-width:220px; max-width:520px; padding:4px 6px; border:1px solid #ccc; border-radius:6px;">
+          <option value="afterH1" data-i18n="tocPosAfterH1">Right after the title h1 (default)</option>
+          <option value="top" data-i18n="tocPosTop">The very front</option>
+        </select>
+      </label>
+      <p class="muted" id="tocPosNoteRow" data-i18n="tocPosNote">(The list fills in with the book's h1/h2 once you load a file; picking one puts the TOC in front of that heading — so you can drop it right before, say, PART I. A heading you choose here also gets a page break, because a TOC that starts halfway down a page reads as an accident.)</p>
       <label class="row"><input type="checkbox" id="forceContrast" checked> <span data-i18n="contrastLabel">Body text black for contrast (white background)</span></label>
       <label class="row"><input type="checkbox" id="figContrast" checked> <span data-i18n="figContrastLabel">Fix low-contrast colors in figures</span></label>
       <label class="row"><input type="checkbox" id="calloutBg" checked> <span data-i18n="calloutBgLabel">Keep colored-background blocks (columns/callouts)</span></label>
@@ -222,13 +229,33 @@
           <option value="0" data-i18n="epubSplitNone">Do not split</option>
         </select>
       </label>
+      <label class="row"><span data-i18n="epubTocDepthLabel">Heading levels in the TOC</span>
+        <select id="epubTocDepth" style="padding:4px 6px; border:1px solid #ccc; border-radius:6px;">
+          <option value="docx" data-i18n="epubTocDepthDocx">Same as the DOCX TOC setting above</option>
+          <option value="1" data-i18n="epubTocDepth1">h1 only</option>
+          <option value="2" data-i18n="epubTocDepth2">h1–h2</option>
+          <option value="3" data-i18n="epubTocDepth3">h1–h3</option>
+          <option value="4" data-i18n="epubTocDepth4">h1–h4</option>
+          <option value="5" data-i18n="epubTocDepth5">h1–h5</option>
+          <option value="6" data-i18n="epubTocDepth6">h1–h6</option>
+        </select>
+      </label>
+      <p class="muted" data-i18n="epubTocDepthNote">(Applies to both the navigation list Kindle shows in its side panel and the TOC page below. A book whose h1 is the title and h2 the chapters needs h1–h2 at least; picking h1 only would leave a one-line TOC.)</p>
       <label class="row"><input type="checkbox" id="epubTocPage" checked> <span data-i18n="epubTocPageLabel">Add a table-of-contents page to the reading order</span></label>
       <label class="row" id="epubTocPageRow"><span data-i18n="epubTocPagePosLabel">Put it in front of</span>
         <select id="epubTocPagePos" style="flex:1; min-width:220px; max-width:520px; padding:4px 6px; border:1px solid #ccc; border-radius:6px;">
           <option value="top" data-i18n="epubTocPagePosTop">The very front</option>
         </select>
       </label>
-      <p class="muted" data-i18n="epubTocPageNote">(This is the TOC the reader can page through, and it is separate from the navigation list Kindle shows in its side panel — that one is always generated. The list fills in with the book's h1/h2 once you load a file, so you can drop the TOC right in front of, say, PART I. Entries use the same heading levels as the DOCX TOC setting above. The single HTML is not modified: the page exists only inside the EPUB.)</p>
+      <p class="muted" data-i18n="epubTocPageNote">(This is the TOC the reader can page through, and it is separate from the navigation list Kindle shows in its side panel — that one is always generated. The list fills in with the book's h1/h2 once you load a file, so you can drop the TOC right in front of, say, PART I. Entries use the heading levels chosen above. The single HTML is not modified: the page exists only inside the EPUB.)</p>
+      <label class="row"><input type="checkbox" id="epubTextColor" checked> <span data-i18n="epubTextColorLabel">Keep text colors (body and headings)</span></label>
+      <p class="muted" data-i18n="epubTextColorNote">(The HTML's own &lt;style&gt; is not carried into the EPUB, so without this every character comes out in the reader's default color. The color is written inline only where it differs from the parent — inheritance covers the rest. Which colors survive is decided by "Body text black for contrast" in the DOCX settings above, the same rule the DOCX conversion uses: on a white page a color below 4.5:1, or a grey, is not a color choice but a screen theme. Turn print mode on first so the colors read are the ones meant for paper.)</p>
+      <label class="row"><input type="checkbox" id="epubCallout" checked> <span data-i18n="epubCalloutLabel">Draw columns / callouts as boxes</span></label>
+      <label class="row" id="epubCalloutRow"><span data-i18n="epubCalloutSelLabel">Selector</span>
+        <input type="text" id="epubCalloutSel" value=".callout, aside, .column, .box" style="flex:1; min-width:200px; padding:4px 6px; border:1px solid #ccc; border-radius:6px;">
+      </label>
+      <label class="row" id="epubCalloutColorRow"><input type="checkbox" id="epubCalloutColor"> <span data-i18n="epubCalloutColorLabel">Color the heading line by callout type (Fire / apps; E Ink shows it as grey)</span></label>
+      <p class="muted" data-i18n="epubCalloutNote">(The HTML's own &lt;style&gt; is not carried into the EPUB — screen colors break on a device — so without this a callout collapses into plain body text. This rebuilds it from what KDP reliably renders: a rule around the block and the leading &lt;b&gt; as a heading line. No background color: E Ink turns it into a grey slab, and in dark mode text with no color of its own becomes unreadable on it.)</p>
       <label class="row"><span data-i18n="epubExcludeLabel">Exclude selector</span>
         <input type="text" id="epubExclude" value=".noprint, .no-print, .screen-only" style="flex:1; min-width:200px; padding:4px 6px; border:1px solid #ccc; border-radius:6px;">
       </label>
@@ -316,7 +343,7 @@
         <button type="button" class="btn" id="joinSaveBtn" disabled data-i18n="joinSaveBtn">Save as…</button>
         <span class="muted" id="joinName" data-i18n="joinNone">No folder selected</span>
       </div>
-        <p class="muted" data-i18n="joinNote">(Pick the <code>book/</code> folder produced by <code>htmlbook.py split</code>. The chapters are reassembled into the single HTML using <code>manifest.json</code> for order. Nothing is written until you press <em>Save as…</em>, which lets you name the file or overwrite the original. The result is also handed to the conversion tab, so you can read it through and convert it without reloading anything. htmlbook.py stays the authority for the archival round-trip; this button is the review loop.)</p>
+        <p class="muted" data-i18n="joinNote">(Pick the <code>book/</code> folder produced by the <em>Split</em> tab. The chapters are reassembled into the single HTML using <code>manifest.json</code> for order. Nothing is written until you press <em>Save as…</em>, which lets you name the file or overwrite the original. The result is also handed to the conversion tab, so you can read it through and convert it without reloading anything. This button is the one you run; tool/htmlbook/htmlbook.py is the same procedure as a CLI, kept as an independent checker.)</p>
       <div class="row">
         <input type="file" id="specInput" accept=".json,application/json" hidden>
         <button type="button" class="btn secondary" id="specBtn" data-i18n="msBtn">Choose the layout spec (JSON)</button>
@@ -335,7 +362,7 @@
         <button type="button" class="btn" id="splitSaveBtn" disabled data-i18n="splitSaveBtn">Write book folder…</button>
         <span class="muted" id="splitName" data-i18n="splitNone">No file selected</span>
       </div>
-      <p class="muted" data-i18n="splitNote">(Chapters are cut at every <code>h1</code>/<code>h2</code> — the same rule as <code>htmlbook.py split</code>. Before anything is written, the result is re-joined in the browser and compared byte-for-byte with the original; if it does not round-trip, nothing is written. Press <em>Write book folder…</em> to save <code>_frame.html</code>, <code>manifest.json</code> and the <code>chNN_slug.html</code> files. If your browser cannot write to a folder, a <code>book.zip</code> is downloaded instead. htmlbook.py stays the authority for archival splits; this tab is the review loop.)</p>
+      <p class="muted" data-i18n="splitNote">(Chapters are cut at every <code>h1</code>/<code>h2</code> — the same rule as <code>htmlbook.py split</code>. Before anything is written, the result is re-joined in the browser and compared byte-for-byte with the original; if it does not round-trip, nothing is written. Press <em>Write book folder…</em> to save <code>_frame.html</code>, <code>manifest.json</code> and the <code>chNN_slug.html</code> files. If your browser cannot write to a folder, a <code>book.zip</code> is downloaded instead. This tab is the one you run; tool/htmlbook/htmlbook.py is the same procedure as a CLI, kept as an independent checker.)</p>
     </div>
   </div>
 
@@ -366,7 +393,7 @@
       s1Title: "1. Input HTML",
       joinBtn: "Join chapter files (book folder)",
       joinNone: "No folder selected",
-      joinNote: "(Pick the book/ folder produced by htmlbook.py split. The chapters are reassembled into the single HTML using manifest.json for order. Nothing is written until you press \"Save as…\", which lets you name the file or overwrite the original. The result is also handed to the conversion tab, so you can read it through and convert it without reloading anything. htmlbook.py stays the authority for the archival round-trip; this button is the review loop.)",
+      joinNote: "(Pick the book/ folder produced by the Split tab. The chapters are reassembled into the single HTML using manifest.json for order. Nothing is written until you press \"Save as…\", which lets you name the file or overwrite the original. The result is also handed to the conversion tab, so you can read it through and convert it without reloading anything. This button is the one you run; tool/htmlbook/htmlbook.py is the same procedure as a CLI, kept as an independent checker.)",
       joinOk: "Joined {n} chapters into a single HTML ({chars} chars).",
       joinDelta: "  {file}: {was} -> {now} chars ({diff})",
       joinFail: "Join aborted: {msg}",
@@ -387,7 +414,7 @@
       splitBtn: "Choose single HTML",
       splitSaveBtn: "Write book folder…",
       splitNone: "No file selected",
-      splitNote: "(Chapters are cut at every h1/h2 — the same rule as htmlbook.py split. Before anything is written, the result is re-joined in the browser and compared byte-for-byte with the original; if it does not round-trip, nothing is written. Press \"Write book folder…\" to save _frame.html, manifest.json and the chNN_slug.html files. If your browser cannot write to a folder, a book.zip is downloaded instead. htmlbook.py stays the authority for archival splits; this tab is the review loop.)",
+      splitNote: "(Chapters are cut at every h1/h2 — the same rule as htmlbook.py split. Before anything is written, the result is re-joined in the browser and compared byte-for-byte with the original; if it does not round-trip, nothing is written. Press \"Write book folder…\" to save _frame.html, manifest.json and the chNN_slug.html files. If your browser cannot write to a folder, a book.zip is downloaded instead. This tab is the one you run; tool/htmlbook/htmlbook.py is the same procedure as a CLI, kept as an independent checker.)",
       splitVerified: "Verified: {n} chapters round-trip byte-for-byte. Press \"Write book folder…\" to save.",
       splitVerifyNote: "Round-trip only checks the plumbing — it does NOT prove the cut points are right. Read the list below against the book's structure.",
       splitRow: "  {n}  {level}  {slug}  ({chars} chars)",
@@ -426,6 +453,7 @@
       msExtra: "chapter HTML in the folder that the spec does not list: {files}. Write their order into the spec (they will not be silently dropped).",
       msMissing: "chapter file is missing: {file}",
       msStyle: "{file}: {n} <style> in the head (expected exactly 1)",
+      msUnscoped: "{file}: {n} selector(s) in an inline SVG <style> are not scoped to a figure id: {sels}. An inline SVG <style> is not scoped — merged, it applies to every chapter. Prefix each selector with the figure id (#fig-id …).",
       msNoBody: "{file}: no <body>",
       msWrap: "{file}: {n} <div class=\"wrap\"> (expected exactly 1)",
       msDivAsym: "{file}: unbalanced div inside .wrap (<div>={o} </div>={c})",
@@ -472,6 +500,12 @@
       tocNote: "(A static, clickable TOC with no page numbers — displays correctly in Kindle/KDP. Headings keep their styles, so Kindle also builds its Go-To navigation.)",
       tocAdded: "Inserted a hyperlinked TOC (levels {range}) {where}. No page numbers — each entry links to its heading.",
       tocAtTop: "at the top of the document",
+      tocPosLabel: "Where to put it",
+      tocPosAfterH1: "Right after the title h1 (default)",
+      tocPosTop: "The very front",
+      tocPosNote: "(The list fills in with the book's h1/h2 once you load a file; picking one puts the TOC in front of that heading — so you can drop it right before, say, PART I. A heading you choose here also gets a page break, because a TOC that starts halfway down a page reads as an accident.)",
+      tocPosBefore: "in front of \"{h}\"",
+      tocPosLost: "TOC position: the chosen heading \"{h}\" is not in the document, so the TOC went after the title h1.",
       tocAfterH1: "after the title h1",
       tocNoH1: "No h1 was found, so the TOC was placed at the top of the document.",
       tocBadRange: "TOC not inserted: heading level range {from}-{to} is invalid (must be 1–6, and from ≤ to).",
@@ -497,11 +531,33 @@
       epubSplitNone: "Do not split",
       epubSplitPicked: "Chapter split: h{lv} ({n} chapters).",
       epubSplitOff: "Chapter split off — the whole book is one XHTML file ({kb} KB).",
+      epubTextColorLabel: "Keep text colors (body and headings)",
+      epubTextColorNote: "(The HTML's own <style> is not carried into the EPUB, so without this every character comes out in the reader's default color. The color is written inline only where it differs from the parent — inheritance covers the rest. Which colors survive is decided by \"Body text black for contrast\" in the DOCX settings above, the same rule the DOCX conversion uses: on a white page a color below 4.5:1, or a grey, is not a color choice but a screen theme. Turn print mode on first so the colors read are the ones meant for paper.)",
+      epubTextColorApplied: "Text color: kept on {n} elements.",
+      epubTextColorNone: "Text color: nothing differed from the default, so no color was written.",
+      epubCalloutLabel: "Draw columns / callouts as boxes",
+      epubCalloutSelLabel: "Selector",
+      epubCalloutColorLabel: "Color the heading line by callout type (Fire / apps; E Ink shows it as grey)",
+      epubCalloutNote: "(The HTML's own <style> is not carried into the EPUB — screen colors break on a device — so without this a callout collapses into plain body text. This rebuilds it from what KDP reliably renders: a rule around the block and the leading <b> as a heading line. No background color: E Ink turns it into a grey slab, and in dark mode text with no color of its own becomes unreadable on it.)",
+      epubCalloutApplied: "Callouts: {n} blocks boxed (selector {sel}).",
+      epubCalloutTinted: "Callout heading colors: {kinds} types.",
+      epubCalloutNone: "Callouts: nothing matched \"{sel}\", so no box was drawn.",
+      epubCalloutBad: "Callout selector is invalid: {sel} ({msg})",
       epubExcludeLabel: "Exclude selector",
+      epubTocDepthLabel: "Heading levels in the TOC",
+      epubTocDepthDocx: "Same as the DOCX TOC setting above",
+      epubTocDepth1: "h1 only",
+      epubTocDepth2: "h1–h2",
+      epubTocDepth3: "h1–h3",
+      epubTocDepth4: "h1–h4",
+      epubTocDepth5: "h1–h5",
+      epubTocDepth6: "h1–h6",
+      epubTocDepthNote: "(Applies to both the navigation list Kindle shows in its side panel and the TOC page below. A book whose h1 is the title and h2 the chapters needs h1–h2 at least; picking h1 only would leave a one-line TOC.)",
+      epubTocDepthUsed: "TOC heading levels: h{from}-h{to} ({n} entries).",
       epubTocPageLabel: "Add a table-of-contents page to the reading order",
       epubTocPagePosLabel: "Put it in front of",
       epubTocPagePosTop: "The very front",
-      epubTocPageNote: "(This is the TOC the reader can page through, and it is separate from the navigation list Kindle shows in its side panel — that one is always generated. The list fills in with the book's h1/h2 once you load a file, so you can drop the TOC right in front of, say, PART I. Entries use the same heading levels as the DOCX TOC setting above. The single HTML is not modified: the page exists only inside the EPUB.)",
+      epubTocPageNote: "(This is the TOC the reader can page through, and it is separate from the navigation list Kindle shows in its side panel — that one is always generated. The list fills in with the book's h1/h2 once you load a file, so you can drop the TOC right in front of, say, PART I. Entries use the heading levels chosen above. The single HTML is not modified: the page exists only inside the EPUB.)",
       epubTocPageAdded: "TOC page: {n} entries, placed in front of \"{where}\".",
       epubTocPageTop: "the very front",
       epubTocPageEmpty: "TOC page: no heading matched h{from}-h{to}, so no page was added.",
@@ -580,7 +636,7 @@
       s1Title: "1. 入力 HTML",
       joinBtn: "章別HTMLを結合（book フォルダ）",
       joinNone: "フォルダ未選択",
-      joinNote: "（htmlbook.py split が作った book/ フォルダを選びます。manifest.json の順序で章を単一HTMLへ戻します。「名前を付けて保存」を押すまで書き込みは起きません（名前を決めても、元の単一HTMLへ上書きしても構いません）。結果は変換タブへも引き渡すので、読み込み直さずそのまま通読・変換できます。アーカイブとしての往復一致の権威は htmlbook.py 側のままで、こちらは推敲ループ用です）",
+      joinNote: "（分割タブが作った book/ フォルダを選びます。manifest.json の順序で章を単一HTMLへ戻します。「名前を付けて保存」を押すまで書き込みは起きません（名前を決めても、元の単一HTMLへ上書きしても構いません）。結果は変換タブへも引き渡すので、読み込み直さずそのまま通読・変換できます。運用の入口はこのボタンです。tool/htmlbook/htmlbook.py は同じ手順の CLI で、独立した検証器として残してあります）",
       joinOk: "{n} 章を単一HTMLに結合しました（{chars} 字）。",
       joinDelta: "  {file}: {was} → {now} 字（{diff}）",
       joinFail: "結合を中止しました: {msg}",
@@ -601,7 +657,7 @@
       splitBtn: "単一HTMLを選択",
       splitSaveBtn: "book フォルダへ書き出す…",
       splitNone: "ファイル未選択",
-      splitNote: "（h1/h2 のたびに章を切ります。htmlbook.py split と同じ規則です。書き出す前に、ブラウザ内で結合し直して原文とバイト一致するか検証します。往復一致しなければ何も書きません。「book フォルダへ書き出す…」を押すと _frame.html・manifest.json・chNN_slug.html 群を保存します。フォルダへ書けないブラウザでは代わりに book.zip をダウンロードします。アーカイブとしての分割の権威は htmlbook.py 側のままで、こちらは推敲ループ用です）",
+      splitNote: "（h1/h2 のたびに章を切ります。htmlbook.py split と同じ規則です。書き出す前に、ブラウザ内で結合し直して原文とバイト一致するか検証します。往復一致しなければ何も書きません。「book フォルダへ書き出す…」を押すと _frame.html・manifest.json・chNN_slug.html 群を保存します。フォルダへ書けないブラウザでは代わりに book.zip をダウンロードします。運用の入口はこのタブです。tool/htmlbook/htmlbook.py は同じ手順の CLI で、独立した検証器として残してあります）",
       splitVerified: "検証OK: {n} 章が往復でバイト一致しました。「book フォルダへ書き出す…」を押してください。",
       splitVerifyNote: "往復一致は配管の検査であって、章の切り口が正しいことは何も保証しません。下の一覧が本の構成と合っているか目で確認してください。",
       splitRow: "  {n}  {level}  {slug}  （{chars} 字）",
@@ -640,6 +696,7 @@
       msExtra: "構成定義に無い章別HTMLがフォルダにあります: {files}。黙って捨てないので、構成定義に順序を書いてください。",
       msMissing: "章ファイルがありません: {file}",
       msStyle: "{file}: head の <style> が {n} 個あります（1個であるべき）",
+      msUnscoped: "{file}: 図の style の中に、図の id で限定されていないセレクタが {n} 件あります: {sels}。インライン SVG の style は scoped ではないので、束ねると全章の図に効きます。各セレクタを図の id で限定してください（#図のid …）。",
       msNoBody: "{file}: <body> がありません",
       msWrap: "{file}: <div class=\"wrap\"> が {n} 個あります（1個であるべき）",
       msDivAsym: "{file}: .wrap 内の div が非対称です（<div>={o} </div>={c}）",
@@ -686,6 +743,12 @@
       tocNote: "（ページ番号なしのクリック可能な目次。Kindle/KDP でそのまま正しく表示されます。見出しは Heading スタイルのままなので、Kindle の「移動」ナビも作られます）",
       tocAdded: "目次を{where}挿入しました（レベル {range}）。ページ番号なし、各項目は見出しへのリンクです。",
       tocAtTop: "文書の先頭に",
+      tocPosLabel: "目次を置く位置",
+      tocPosAfterH1: "書名 h1 の直後（既定）",
+      tocPosTop: "いちばん先頭",
+      tocPosNote: "（HTML を読み込むと、この一覧に本の h1 / h2 が並びます。見出しを選ぶと、その手前に目次が入ります（たとえば PART I の直前）。見出しを選んだ場合は目次の前で改ページします——ページの途中から始まる目次は事故に見えるためです）",
+      tocPosBefore: "「{h}」の手前に",
+      tocPosLost: "目次の位置: 選んだ見出し「{h}」が本文に見つかりません。書名 h1 の直後に入れました。",
       tocAfterH1: "書名 h1 の直後に",
       tocNoH1: "h1 が見つからなかったため、目次は文書の先頭に置きました。",
       tocBadRange: "目次を挿入しませんでした: 見出しレベル範囲 {from}-{to} が不正です（1〜6 かつ 開始 ≤ 終了）。",
@@ -711,11 +774,33 @@
       epubSplitNone: "分割しない",
       epubSplitPicked: "章分割: h{lv}（{n}章）。",
       epubSplitOff: "章分割なし — 本文全体が1つの XHTML です（{kb} KB）。",
+      epubTextColorLabel: "文字色を反映する（本文・見出し）",
+      epubTextColorNote: "（単一HTML の <style> は EPUB へ持ち込まないため、既定では全ての文字が端末の既定色になります。色は「親から変わったところ」だけインラインで書きます——残りは継承で足ります。どの色を残すかは上の DOCX 設定「本文を黒にして読みやすく（白背景）」が決め、DOCX 変換と同じ規則です: 白い紙の上でコントラスト比 4.5 未満の色や灰色は、色の指定ではなく画面用テーマだからです。印刷モードを ON にしてから変換すると、紙向けに指定した色の方を読みます）",
+      epubTextColorApplied: "文字色: {n} 要素に反映しました。",
+      epubTextColorNone: "文字色: 既定色と違う指定がありませんでした。色は書いていません。",
+      epubCalloutLabel: "囲み（コラム / コールアウト）を枠付きで出す",
+      epubCalloutSelLabel: "対象セレクタ",
+      epubCalloutColorLabel: "囲みの種類ごとに見出し行へ色を付ける（Fire / アプリ向け。E Ink では灰色に見えます）",
+      epubCalloutNote: "（単一HTML の <style> は EPUB へ持ち込みません——画面用の色は端末で破綻するため。そのため既定では囲みが地の文へ潰れます。ここでは KDP が確実に描く範囲だけで組み直します: ブロックを囲む罫と、先頭の <b> を見出し行にする指定です。背景色は入れません——E Ink では灰色の塊になり、ダークモードでは色を指定していない文字が読めなくなるためです）",
+      epubCalloutApplied: "囲み: {n} か所を枠にしました（セレクタ {sel}）。",
+      epubCalloutTinted: "囲みの見出し色: {kinds} 種類。",
+      epubCalloutNone: "囲み: 「{sel}」に一致する要素がありません。枠は付けていません。",
+      epubCalloutBad: "囲みのセレクタが不正です: {sel}（{msg}）",
       epubExcludeLabel: "除外セレクタ",
+      epubTocDepthLabel: "目次に入れる見出しレベル",
+      epubTocDepthDocx: "上の DOCX 目次の設定に合わせる",
+      epubTocDepth1: "h1 のみ",
+      epubTocDepth2: "h2 まで",
+      epubTocDepth3: "h3 まで",
+      epubTocDepth4: "h4 まで",
+      epubTocDepth5: "h5 まで",
+      epubTocDepth6: "h6 まで",
+      epubTocDepthNote: "（Kindle が左側に出す論理目次と、下の目次ページの両方に効きます。h1 が書名・h2 が章という作りの本では最低でも「h2 まで」が必要です。「h1 のみ」だと目次が1行になります）",
+      epubTocDepthUsed: "目次の見出しレベル: h{from}〜h{to}（{n} 項目）。",
       epubTocPageLabel: "読み順に目次ページを入れる",
       epubTocPagePosLabel: "この見出しの手前に入れる",
       epubTocPagePosTop: "いちばん先頭",
-      epubTocPageNote: "（読者がページとしてめくれる目次です。Kindle が左側に出す論理目次とは別物で、そちらは常に生成しています。HTML を読み込むと、この一覧に本の h1 / h2 が並ぶので、たとえば PART I の直前を選べます。拾う見出しレベルは上の DOCX 目次の設定と同じものを使います。単一HTML は書き換えません。このページは EPUB の中だけに存在します）",
+      epubTocPageNote: "（読者がページとしてめくれる目次です。Kindle が左側に出す論理目次とは別物で、そちらは常に生成しています。HTML を読み込むと、この一覧に本の h1 / h2 が並ぶので、たとえば PART I の直前を選べます。拾う見出しレベルは上の「目次に入れる見出しレベル」に従います。単一HTML は書き換えません。このページは EPUB の中だけに存在します）",
       epubTocPageAdded: "目次ページ: {n} 項目を「{where}」の手前に入れました。",
       epubTocPageTop: "いちばん先頭",
       epubTocPageEmpty: "目次ページ: h{from}-h{to} に該当する見出しが無いため、入れていません。",
@@ -793,7 +878,7 @@
       s1Title: "1. 输入 HTML",
       joinBtn: "合并章节 HTML（book 文件夹）",
       joinNone: "未选择文件夹",
-      joinNote: "（选择 htmlbook.py split 生成的 book/ 文件夹。按 manifest.json 的顺序将章节还原为单一 HTML。在点击「另存为」之前不会写入任何文件（可自行命名，也可覆盖原始单一 HTML）。结果同时交给转换标签页，无需重新载入即可通读与转换。归档级往返一致仍以 htmlbook.py 为准，此按钮用于校订循环）",
+      joinNote: "（选择「拆分」标签页生成的 book/ 文件夹。按 manifest.json 的顺序将章节还原为单一 HTML。在点击「另存为」之前不会写入任何文件（可自行命名，也可覆盖原始单一 HTML）。结果同时交给转换标签页，无需重新载入即可通读与转换。此按钮即为常规入口；tool/htmlbook/htmlbook.py 是同一流程的 CLI，作为独立校验器保留）",
       joinOk: "已将 {n} 章合并为单一 HTML（{chars} 字）。",
       joinDelta: "  {file}: {was} → {now} 字（{diff}）",
       joinFail: "已中止合并: {msg}",
@@ -814,7 +899,7 @@
       splitBtn: "选择单一 HTML",
       splitSaveBtn: "写入 book 文件夹…",
       splitNone: "未选择文件",
-      splitNote: "（在每个 h1/h2 处切分章节，与 htmlbook.py split 规则相同。写入前会在浏览器内重新合并并与原文逐字节比对；若无法往返一致则不写入任何文件。点击「写入 book 文件夹…」保存 _frame.html、manifest.json 与 chNN_slug.html 等文件。若浏览器无法写入文件夹，则改为下载 book.zip。归档级拆分仍以 htmlbook.py 为准，此标签页用于校订循环）",
+      splitNote: "（在每个 h1/h2 处切分章节，与 htmlbook.py split 规则相同。写入前会在浏览器内重新合并并与原文逐字节比对；若无法往返一致则不写入任何文件。点击「写入 book 文件夹…」保存 _frame.html、manifest.json 与 chNN_slug.html 等文件。若浏览器无法写入文件夹，则改为下载 book.zip。此标签页即为常规入口；tool/htmlbook/htmlbook.py 是同一流程的 CLI，作为独立校验器保留）",
       splitVerified: "校验通过: {n} 章往返逐字节一致。请点击「写入 book 文件夹…」保存。",
       splitVerifyNote: "往返一致只是管道检查，并不能证明切分点正确。请对照本书结构核对下面的列表。",
       splitRow: "  {n}  {level}  {slug}  （{chars} 字）",
@@ -853,6 +938,7 @@
       msExtra: "文件夹中存在构成定义未列出的章节 HTML: {files}。不会静默丢弃，请把顺序写进构成定义。",
       msMissing: "缺少章节文件: {file}",
       msStyle: "{file}: head 中有 {n} 个 <style>（应为 1 个）",
+      msUnscoped: "{file}: 图内 style 中有 {n} 个选择器未以图的 id 限定: {sels}。内联 SVG 的 style 并非 scoped，合并后会作用于所有章节的图。请为每个选择器加上图的 id 前缀（#图的id …）。",
       msNoBody: "{file}: 没有 <body>",
       msWrap: "{file}: 有 {n} 个 <div class=\"wrap\">（应为 1 个）",
       msDivAsym: "{file}: .wrap 内的 div 不对称（<div>={o} </div>={c}）",
@@ -899,6 +985,12 @@
       tocNote: "（无页码的可点击目录，可在 Kindle/KDP 中正确显示。标题保留其样式，因此 Kindle 也会生成「转到」导航）",
       tocAdded: "已在{where}插入目录（级别 {range}）。无页码，每项均链接到对应标题。",
       tocAtTop: "文档开头",
+      tocPosLabel: "目录位置",
+      tocPosAfterH1: "书名 h1 之后（默认）",
+      tocPosTop: "最前面",
+      tocPosNote: "（载入 HTML 后，此列表会列出书中的 h1 / h2。选择某个标题后，目录会插入到该标题之前（例如 PART I 之前）。选择标题时会在目录前分页——从页面中间开始的目录看起来像是失误。）",
+      tocPosBefore: "「{h}」之前",
+      tocPosLost: "目录位置：书中找不到所选标题「{h}」，已改为放在书名 h1 之后。",
       tocAfterH1: "书名 h1 之后",
       tocNoH1: "未找到 h1，目录已放在文档开头。",
       tocBadRange: "未插入目录: 标题级别范围 {from}-{to} 无效（须为 1〜6 且 起始 ≤ 结束）。",
@@ -924,11 +1016,33 @@
       epubSplitNone: "不分割",
       epubSplitPicked: "章节分割: h{lv}（{n} 章）。",
       epubSplitOff: "未分割 — 全书为一个 XHTML 文件（{kb} KB）。",
+      epubTextColorLabel: "保留文字颜色（正文与标题）",
+      epubTextColorNote: "（单一 HTML 的 <style> 不会带入 EPUB，因此默认所有文字都会显示为阅读器的默认颜色。颜色只在「与父元素不同」处以内联方式写入，其余由继承覆盖。保留哪些颜色由上方 DOCX 设置「正文用黑色以保证对比度（白底）」决定，与 DOCX 转换同规则: 在白纸上对比度低于 4.5 的颜色或灰色，并非配色选择而是屏幕主题。请先开启打印模式，这样读取到的才是为纸面指定的颜色。）",
+      epubTextColorApplied: "文字颜色：已在 {n} 个元素上保留。",
+      epubTextColorNone: "文字颜色：没有与默认色不同的指定，未写入颜色。",
+      epubCalloutLabel: "将专栏 / 提示框输出为带边框的区块",
+      epubCalloutSelLabel: "目标选择器",
+      epubCalloutColorLabel: "按类型为标题行着色（Fire / 应用；E Ink 上显示为灰色）",
+      epubCalloutNote: "（单一 HTML 的 <style> 不会带入 EPUB——屏幕用配色在设备上会失效——因此默认情况下提示框会塌陷成正文。这里只用 KDP 能可靠渲染的部分重建: 区块四周的边框，以及把开头的 <b> 变成标题行。不使用背景色: E Ink 上会变成灰块，深色模式下未指定颜色的文字会难以辨认。）",
+      epubCalloutApplied: "提示框：已为 {n} 处加上边框（选择器 {sel}）。",
+      epubCalloutTinted: "提示框标题配色：{kinds} 种。",
+      epubCalloutNone: "提示框：没有元素匹配「{sel}」，未加边框。",
+      epubCalloutBad: "提示框选择器无效：{sel}（{msg}）",
       epubExcludeLabel: "排除选择器",
+      epubTocDepthLabel: "目录包含的标题级别",
+      epubTocDepthDocx: "沿用上面 DOCX 目录的设置",
+      epubTocDepth1: "仅 h1",
+      epubTocDepth2: "至 h2",
+      epubTocDepth3: "至 h3",
+      epubTocDepth4: "至 h4",
+      epubTocDepth5: "至 h5",
+      epubTocDepth6: "至 h6",
+      epubTocDepthNote: "（同时作用于 Kindle 侧边栏的导航目录和下面的目录页。若书中 h1 是书名、h2 是章，至少需要「至 h2」；选「仅 h1」则目录只有一行。）",
+      epubTocDepthUsed: "目录标题级别：h{from}-h{to}（{n} 个条目）。",
       epubTocPageLabel: "在阅读顺序中加入目录页",
       epubTocPagePosLabel: "插入到该标题之前",
       epubTocPagePosTop: "最前面",
-      epubTocPageNote: "（这是读者可以翻阅的目录页，与 Kindle 侧边栏显示的导航目录不同，后者始终会生成。载入 HTML 后，此列表会列出书中的 h1 / h2，例如可选择 PART I 之前。抓取的标题级别沿用上面 DOCX 目录的设置。单一 HTML 不会被改动，该页仅存在于 EPUB 内）",
+      epubTocPageNote: "（这是读者可以翻阅的目录页，与 Kindle 侧边栏显示的导航目录不同，后者始终会生成。载入 HTML 后，此列表会列出书中的 h1 / h2，例如可选择 PART I 之前。抓取的标题级别遵循上面的「目录包含的标题级别」设置。单一 HTML 不会被改动，该页仅存在于 EPUB 内）",
       epubTocPageAdded: "目录页：已加入 {n} 个条目，位置在「{where}」之前。",
       epubTocPageTop: "最前面",
       epubTocPageEmpty: "目录页：没有符合 h{from}-h{to} 的标题，未加入。",
@@ -1036,6 +1150,13 @@
     epubLang: document.getElementById("epubLang"),
     epubSplit: document.getElementById("epubSplit"),
     epubExclude: document.getElementById("epubExclude"),
+    epubTocDepth: document.getElementById("epubTocDepth"),
+    epubTextColor: document.getElementById("epubTextColor"),
+    epubCallout: document.getElementById("epubCallout"),
+    epubCalloutRow: document.getElementById("epubCalloutRow"),
+    epubCalloutColorRow: document.getElementById("epubCalloutColorRow"),
+    epubCalloutSel: document.getElementById("epubCalloutSel"),
+    epubCalloutColor: document.getElementById("epubCalloutColor"),
     epubTocPage: document.getElementById("epubTocPage"),
     epubTocPageRow: document.getElementById("epubTocPageRow"),
     epubTocPagePos: document.getElementById("epubTocPagePos"),
@@ -1052,6 +1173,9 @@
     minLongRow: document.getElementById("minLongRow"),
     h1PageBreak: document.getElementById("h1PageBreak"),
     tocEnable: document.getElementById("tocEnable"),
+    tocPos: document.getElementById("tocPos"),
+    tocPosRow: document.getElementById("tocPosRow"),
+    tocPosNoteRow: document.getElementById("tocPosNoteRow"),
     tocOptRow: document.getElementById("tocOptRow"),
     tocTitle: document.getElementById("tocTitle"),
     tocFrom: document.getElementById("tocFrom"),
@@ -1425,6 +1549,38 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
     return { css: styles[0], inner: inner };
   }
 
+  // 章本文のインライン SVG が持つ style は scoped ではない。章別HTML単体なら被害が
+  // その章の中に閉じるが、24本を束ねた瞬間に宣言が全章の図へ効く。実測 2026-07-31:
+  // ch05/ch07 の扉絵が持っていた text{fill:#e7e9f0} が、前付の図0-1 の文字を薄く化け
+  // させた（型セレクタは継承値にも presentation 属性にも勝つ）。verbatim 包含もタグ数も
+  // id の一意性も緑のまま通り抜けたので、配管の検査では捕まらない。ここで中止する。
+  const MS_SVG_STYLE_RE = /<style[^>]*>([\s\S]*?)<\/style>/g;
+  const MS_CSS_COMMENT_RE = /\/\*[\s\S]*?\*\//g;
+  const MS_RULE_RE = /([^{}]+)\{[^{}]*\}/g;
+  const MS_SCOPED_RE = /^[a-zA-Z]*#[\w-]+/;   // #id … / svg#id … だけを許す
+  const MS_KEYFRAME_RE = /^(from|to|\d+(\.\d+)?%)$/;
+
+  function msUnscopedSelectors(inner) {
+    const bad = [];
+    MS_SVG_STYLE_RE.lastIndex = 0;
+    let block;
+    while ((block = MS_SVG_STYLE_RE.exec(inner))) {
+      const css = block[1].replace(MS_CSS_COMMENT_RE, "");
+      MS_RULE_RE.lastIndex = 0;
+      let rule;
+      while ((rule = MS_RULE_RE.exec(css))) {
+        for (const one of rule[1].split(",")) {
+          const sel = one.trim().replace(/\s+/g, " ");
+          // @media / @font-face の前置きと、@keyframes の中の from / to / 50% は
+          // セレクタではない。中の規則そのものは上の走査で別に拾われる。
+          if (!sel || sel.charAt(0) === "@" || MS_KEYFRAME_RE.test(sel)) continue;
+          if (!MS_SCOPED_RE.test(sel) && bad.indexOf(sel) < 0) bad.push(sel);
+        }
+      }
+    }
+    return bad;
+  }
+
   // 章別HTMLが自前で持つ目次を統合の対象から外す。「はじめに」は単体で開いたときの
   // ために目次を持っていて、その <a href> は別ファイル（dt_r07_ch01_cgpt.html#c1 など）
   // を指す。1本に束ねた側へそのまま持ち込むと、どこへも飛ばない目次が本物と並ぶ。
@@ -1457,6 +1613,14 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
     return { css: chunks.join("\n"), note: note };
   }
 
+  // 部扉を出すかどうか。title も subtitle も空の部は「章を束ねるだけで扉は立てない」
+  // 意味にする（前付のように、まとめたいが扉は要らない塊のため）。spec から部ごと
+  // 消すのは駄目で、その章が構成定義から外れて統合が中止する。
+  // subtitle だけある部は扉を出す（黙って副題を捨てない）。
+  function msPartHeading(part) {
+    return (part.title || "").trim() || (part.subtitle || "").trim();
+  }
+
   function msHeadingText(html, re) {
     const out = [];
     re.lastIndex = 0;
@@ -1470,18 +1634,22 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
   function msBuildToc(spec, units) {
     const lines = ['<nav class="toc" aria-label="目次">', "<h2>目次</h2>", "<ol>"];
     for (const part of spec.parts) {
-      lines.push('<li class="toc-part">' + msEsc(part.title) + "</li>");
+      // 見出しの無い部（前付など）は目次にも行を作らない。中身だけ平らに並ぶ。
+      if (msPartHeading(part)) lines.push('<li class="toc-part">' + msEsc(msPartHeading(part)) + "</li>");
       for (const uid of part.units) {
         const inner = units[uid];
         let titles = msHeadingText(inner, /<h2[^>]*class="chapter"[^>]*>([\s\S]*?)<\/h2>/g);
+        // 前付 (h1.matter) と後付 (h2.matter) で高さが違う。後付は部見出し h1.part の
+        // 下に入るので h2、前付は部の外に置くこともあるので h1 のまま。両方拾う。
+        if (!titles.length) titles = msHeadingText(inner, /<h2[^>]*class="matter"[^>]*>([\s\S]*?)<\/h2>/g);
         if (!titles.length) titles = msHeadingText(inner, /<h1[^>]*class="matter"[^>]*>([\s\S]*?)<\/h1>/g);
         if (!titles.length) throw new Error(t("msNoHeading", { uid: uid }));
         if (titles.length === 1) {
           lines.push('<li><a href="#u-' + uid + '">' + msEsc(titles[0]) + "</a></li>");
         } else {
-          // 後付のように、1ファイルへ複数の h1.matter が並ぶ場合
+          // 後付のように、1ファイルへ複数の .matter が並ぶ場合
           const anchors = [];
-          const are = /<h1[^>]*class="matter"[^>]*id="([^"]+)"/g;
+          const are = /<h[12][^>]*class="matter"[^>]*id="([^"]+)"/g;
           let a;
           while ((a = are.exec(inner))) anchors.push(a[1]);
           titles.forEach((title, i) => {
@@ -1497,8 +1665,8 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
 
   function msBuildNote(spec, nUnits, cssNote) {
     const items = [
-      "章別HTML " + nUnits + " 本を <code>tool/htmlbook/merge_standalone.py</code>"
-        + "（同じ手順の移植として <code>tool/html2docx</code> の結合タブ）で束ねた生成物である。"
+      "章別HTML " + nUnits + " 本を <code>tool/html2docx</code> の結合タブ"
+        + "（同じ手順の CLI として <code>tool/htmlbook/merge_standalone.py</code>）で束ねた生成物である。"
         + "直すのは章別HTML（<code>digital_thread/ch/</code>）で、このファイルではない。次回の統合が上書きする。",
       "書名・部扉・この目次は章別HTMLに無いので、章構成の定義から差し込んだ。本文ではない。",
     ];
@@ -1575,6 +1743,12 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
       const text = byName[fn];
       if (text === undefined) throw new Error(t("msMissing", { file: fn }));
       const u = msReadUnit(fn, text);
+      const unscoped = msUnscopedSelectors(u.inner);
+      if (unscoped.length) {
+        throw new Error(t("msUnscoped", {
+          file: fn, n: unscoped.length, sels: unscoped.slice(0, 6).join(" / "),
+        }));
+      }
       const d = msDropUnitToc(fn, u.inner);
       if (d.dropped) droppedTocs.push(uid + "（" + d.dropped + " 本）");
       units[uid] = d.inner;
@@ -1607,9 +1781,11 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
       toc,
     ];
     for (const part of spec.parts) {
-      const sub = part.subtitle || "";
-      const subhtml = sub ? '<span class="partsub">' + msEsc(sub) + "</span>" : "";
-      chunks.push('<h1 class="part" id="' + part.id + '">' + msEsc(part.title) + subhtml + "</h1>");
+      if (msPartHeading(part)) {
+        const sub = part.subtitle || "";
+        const subhtml = sub ? '<span class="partsub">' + msEsc(sub) + "</span>" : "";
+        chunks.push('<h1 class="part" id="' + part.id + '">' + msEsc(part.title || "") + subhtml + "</h1>");
+      }
       for (const uid of part.units) {
         chunks.push('<section class="unit" id="u-' + uid + '">');
         chunks.push(units[uid]);
@@ -2025,7 +2201,7 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
       clone.querySelectorAll("script").forEach(s => s.remove());
       els.preview.appendChild(clone);
       loaded = true;
-      fillTocPagePicker(body);
+      fillHeadingPickers(body);
       els.btnDocx.disabled = false;
       els.btnEpub.disabled = false;
       els.btnSvg.disabled = svgs === 0;
@@ -2372,12 +2548,19 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
     // 先に live 側へ印を付けてから複製し、複製側で印の付いた部分木を丸ごと削る。
     // （live と複製で svg/img の並びを一致させるため、走査もこの後に行う）
     const dropped = markNonContent(body);
+    // 文字色も live 側で決める。複製には <style> が効いていないので算出値を取れない。
+    const colored = markTextColors(body);
     const work = body.cloneNode(true);
     for (const el of [...work.querySelectorAll("[" + DROP_ATTR + "]")]) el.remove();
+    applyTextColors(work);
     const inDropped = el => !!(el.closest && el.closest("[" + DROP_ATTR + "]"));
     const liveSvgs = [...body.querySelectorAll("svg")].filter(s => !inDropped(s));
     const liveImgs = [...body.querySelectorAll("img")].filter(i => !inDropped(i));
+    // 囲みの見た目は live 側の算出値から拾う（複製には <style> が効いていないため）。
+    // DROP_ATTR が残っているこの位置でしか「本にしない部分」を除外できない。
+    const callout = epubCalloutCss(body, inDropped);
     dropped.forEach(el => el.removeAttribute(DROP_ATTR)); // live は元に戻す（プレビューを壊さない）
+    colored.forEach(el => el.removeAttribute(COLOR_ATTR));
     const workSvgs = [...work.querySelectorAll("svg")];
     const workImgs = [...work.querySelectorAll("img")];
     if (dropped.length) log(t("uiDropped", { n: dropped.length }));
@@ -2433,8 +2616,9 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
     await nextFrame();
 
     // ---- 見出しにアンカーを振り、章へ分割する ----
-    const from = Math.round(numOr(els.tocFrom.value, 1));
-    const to = Math.round(numOr(els.tocTo.value, 3));
+    const range = epubTocRange();
+    const from = range.from;
+    const to = range.to;
     const heads = [...work.querySelectorAll("h1,h2,h3,h4,h5,h6")];
     heads.forEach((h, i) => { if (!h.id) h.id = "h" + (i + 1); });
 
@@ -2451,6 +2635,7 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
         }
       }
     }
+    log(t("epubTocDepthUsed", { from: from, to: to, n: nav.length }), nav.length ? "" : "warn");
 
     // 読み順に入る目次ページ。上の nav（Kindle が左側に出す論理目次）とは別物で、
     // 読者がページとしてめくれる本文側の目次。KDP は両方あるのが普通。
@@ -2480,7 +2665,7 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
       + '  <rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles>\n'
       + '</container>\n');
 
-    zip.file("OEBPS/style.css", epubCss());
+    zip.file("OEBPS/style.css", epubCss(callout.css));
     for (const im of images) zip.file("OEBPS/images/" + im.name, im.bytes);
     for (const ch of chapters) zip.file("OEBPS/" + ch.file, chapterXhtml(ch, title, lang));
     zip.file("OEBPS/nav.xhtml", navXhtml(nav, lang, title));
@@ -2492,6 +2677,7 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
     const blob = await zip.generateAsync({ type: "blob", mimeType: "application/epub+zip" });
     const fname = (title.replace(/[\\/:*?"<>|]/g, "_").slice(0, 60) || "book") + ".epub";
     downloadBlob(blob, fname);
+    if (ADJ.text) log(t("contrastAdjusted", { n: ADJ.text }));
     if (ADJ.fig) log(t("figAdjusted", { n: ADJ.fig }));
     log(t("epubSummary", {
       chapters: chapters.length, images: images.length, toc: nav.length,
@@ -2503,11 +2689,18 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
 
   // 画像ノード。幅は CSS 側(width:100%)に任せ、属性で固定しない
   // （固定するとその寸法が上限になり、DOCX と同じ頭打ちを再現してしまう）。
+  //
+  // src はここでは付けない。付けた瞬間にブラウザが読み込みを始め、EPUB の中でしか
+  // 意味を持たない相対パス（images/fig_001.png）を **このツールの置き場所** から
+  // 取りにいって全部 404 になる（図の数だけコンソールが赤くなる。EPUB 自体は正しい）。
+  // 実体は zip へ入れるので取得は要らない。serializeXhtml が XML 文書へ移したあと
+  // ——ブラウジングコンテキストが無く、読み込みが起きない場所で—— src へ戻す。
+  const EPUB_SRC_ATTR = "data-h2d-src";
   function epubImgNode(name, alt) {
     const d = document.createElement("div");
     d.className = "figure";
     const im = document.createElement("img");
-    im.setAttribute("src", "images/" + name);
+    im.setAttribute(EPUB_SRC_ATTR, "images/" + name);
     im.setAttribute("alt", alt || "");
     d.appendChild(im);
     return d;
@@ -2535,6 +2728,21 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
       catch (err) { log(t("excludeBad", { sel: sel, msg: err.message }), "warn"); }
     }
     return marked;
+  }
+
+  // 目次に拾う見出しレベル。Kindle が左側に出す論理目次（nav.xhtml / toc.ncx）と、
+  // 読み順に入る目次ページの両方がこの範囲を使う（同じ本で2つの目次が食い違わないように）。
+  // 既定の "docx" は DOCX 目次の from-to をそのまま借りる（この設定を足す前の挙動）。
+  function epubTocRange() {
+    const v = els.epubTocDepth.value;
+    if (v !== "docx") {
+      const to = Math.min(6, Math.max(1, Math.round(numOr(v, 3))));
+      return { from: 1, to: to };
+    }
+    return {
+      from: Math.round(numOr(els.tocFrom.value, 1)),
+      to: Math.round(numOr(els.tocTo.value, 3)),
+    };
   }
 
   // 章分割のレベルを決める。h1 が1つだけの文書は「h1=書名 / h2=章」の構成なので、
@@ -2585,6 +2793,12 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
     const doc = document.implementation.createDocument("http://www.w3.org/1999/xhtml", "html", null);
     const bodyEl = doc.createElementNS("http://www.w3.org/1999/xhtml", "body");
     for (const n of [...el.childNodes]) bodyEl.appendChild(doc.importNode(n, true));
+    // ここは createDocument で作った XML 文書。ブラウジングコンテキストを持たないので
+    // src を書いても取得は起きない。EPUB の中でだけ意味のある相対パスをここで戻す。
+    for (const im of bodyEl.querySelectorAll("[" + EPUB_SRC_ATTR + "]")) {
+      im.setAttribute("src", im.getAttribute(EPUB_SRC_ATTR));
+      im.removeAttribute(EPUB_SRC_ATTR);
+    }
     return new XMLSerializer().serializeToString(bodyEl)
       .replace(/^<body[^>]*>/, "").replace(/<\/body>$/, "");
   }
@@ -2607,24 +2821,37 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
     return { level: HEADING[h.tagName], text: txt };
   }
 
-  function fillTocPagePicker(body) {
-    const sel = els.epubTocPagePos;
-    const keep = sel.value;
-    // 先頭の「いちばん先頭」だけ残して作り直す
-    while (sel.options.length > 1) sel.remove(1);
+  // DOCX の目次と EPUB の目次ページは、どちらも「どの見出しの手前に入れるか」を選ぶ。
+  // 一覧の作り方（文言と何番目か）を共有し、選択肢の値の形も揃えておく。
+  function fillHeadingPickers(body) {
     const heads = [...body.querySelectorAll("h1,h2")].map(headingLabel).filter(h => h.text);
     // 同じ文言の見出しが複数あっても取り違えないよう、何番目かを値に持たせる。
     const seen = new Map();
+    const items = [];
     for (const h of heads) {
       const n = (seen.get(h.text) || 0) + 1;
       seen.set(h.text, n);
+      items.push({
+        value: "h:" + n + ":" + h.text,
+        label: "h" + h.level + "  " + (h.text.length > 70 ? h.text.slice(0, 70) + "…" : h.text),
+      });
+    }
+    fillHeadingPicker(els.epubTocPagePos, 1, items); // 固定は「いちばん先頭」の1つ
+    fillHeadingPicker(els.tocPos, 2, items);         // 固定は「書名 h1 の直後」「いちばん先頭」
+  }
+
+  // keepFixed 個の固定選択肢を残して見出しを並べ直す。
+  function fillHeadingPicker(sel, keepFixed, items) {
+    const keep = sel.value;
+    while (sel.options.length > keepFixed) sel.remove(keepFixed);
+    for (const it of items) {
       const o = document.createElement("option");
-      o.value = "h:" + n + ":" + h.text;
-      o.textContent = "h" + h.level + "  " + (h.text.length > 70 ? h.text.slice(0, 70) + "…" : h.text);
+      o.value = it.value;
+      o.textContent = it.label;
       sel.appendChild(o);
     }
     // 選び直しの手間を減らすため、同じ見出しがまだあるなら選択を保つ。
-    sel.value = [...sel.options].some(o => o.value === keep) ? keep : "top";
+    sel.value = [...sel.options].some(o => o.value === keep) ? keep : sel.options[0].value;
   }
 
   // 選ばれた見出しが、どの章ファイルの手前かを解く。
@@ -2727,7 +2954,7 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
 
   // 図は width:100% に留める。max-width を原寸に固定しないのは、
   // 端末側が持っている画素を全部使えるようにするため。
-  function epubCss() {
+  function epubCss(extra) {
     return [
       "html, body { margin: 0; padding: 0; }",
       "body { line-height: 1.7; }",
@@ -2751,7 +2978,134 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
       "ol.book-toc li.book-toc-l4 { margin-left: 3em; font-size: .9em; }",
       "ol.book-toc li.book-toc-l5 { margin-left: 4em; font-size: .9em; }",
       "ol.book-toc li.book-toc-l6 { margin-left: 5em; font-size: .9em; }",
-    ].join("\n") + "\n";
+    ].concat(extra || []).join("\n") + "\n";
+  }
+
+  // ---- 文字色 ----
+  // EPUB へ <style> を持ち込まない以上、色は要素へ直接書くしかない。ただし全要素に書くと
+  // 本文が肥大するので「親から色が変わったところ」だけに書く（残りは継承で足りる）。
+  // どの色を残すかは DOCX の runFromStyle と同じ規則にする。同じ本から出る2つの成果物で
+  // 色の扱いが食い違うのは事故なので、規則は1つにする。
+  const COLOR_ATTR = "data-h2d-color";
+  function markTextColors(root) {
+    const marked = [];
+    if (!els.epubTextColor.checked) return marked;
+    const force = els.forceContrast.checked;
+    // 親子で同じ要素の算出値を2度引かないよう覚えておく（本1冊分では回数が効く）。
+    const cache = new WeakMap();
+    const colorOf = el => {
+      if (cache.has(el)) return cache.get(el);
+      let v = null;
+      try { v = parseAnyColor(gcs(el).color); } catch (e) { v = null; }
+      cache.set(el, v);
+      return v;
+    };
+    for (const el of root.querySelectorAll("*")) {
+      // SVG は EPUB ではラスタへ焼くので触らない。本文でない要素も対象外。
+      if (el.namespaceURI !== "http://www.w3.org/1999/xhtml") continue;
+      if (NON_CONTENT.has(el.tagName)) continue;
+      if (el.hasAttribute(DROP_ATTR) || el.closest("[" + DROP_ATTR + "]")) continue;
+      const hex = colorOf(el);
+      const pHex = colorOf(el.parentElement || root);
+      if (!hex || hex === pHex) continue;
+      // 白い紙の上でコントラスト比 4.5 未満の色や灰色は、色の指定ではなく画面用テーマ。
+      if (force && (isGrayish(hex) || contrastWhite(hex) < 4.5)) { ADJ.text++; continue; }
+      el.setAttribute(COLOR_ATTR, hex);
+      marked.push(el);
+    }
+    if (marked.length) log(t("epubTextColorApplied", { n: marked.length }), "ok");
+    else log(t("epubTextColorNone"));
+    return marked;
+  }
+
+  // 印を複製側でインラインの color へ変える。既存の style は残す（幅指定などを消さない）。
+  function applyTextColors(work) {
+    for (const el of [...work.querySelectorAll("[" + COLOR_ATTR + "]")]) {
+      const hex = el.getAttribute(COLOR_ATTR);
+      el.removeAttribute(COLOR_ATTR);
+      const prev = (el.getAttribute("style") || "").trim().replace(/;$/, "");
+      el.setAttribute("style", (prev ? prev + "; " : "") + "color: #" + hex);
+    }
+  }
+
+  // 囲み（コラム / コールアウト）を EPUB でも囲みとして出す。
+  // 単一HTML の <style> は EPUB へ持ち込まないので（画面用の色は端末で破綻する）、
+  // 何もしないとコラムは地の文へ潰れる。KDP が確実に描く範囲——枠線・余白・見出し行——
+  // だけで組み直す。背景色は入れない: E Ink では灰色の塊になり、ダークモードでは
+  // 文字色を自分で持たない本文がその上で読めなくなる。
+  function epubCalloutCss(liveBody, inDropped) {
+    const none = { css: [], n: 0, kinds: 0 };
+    if (!els.epubCallout.checked) return none;
+    const sel = (els.epubCalloutSel.value || "").trim();
+    if (!sel) return none;
+    let hits;
+    try { hits = [...liveBody.querySelectorAll(sel)].filter(el => !inDropped(el)); }
+    catch (err) { log(t("epubCalloutBad", { sel: sel, msg: err.message }), "warn"); return none; }
+    if (!hits.length) { log(t("epubCalloutNone", { sel: sel }), "warn"); return none; }
+
+    const css = [];
+    // 既定のセレクタは複数の書き方を並べてあるので、この本に無い方の規則まで書くと
+    // style.css に死んだ指定が残る。実際に当たった部分だけ書く。
+    const parts = sel.split(",").map(s => s.trim()).filter(Boolean).filter(p => {
+      try { return [...liveBody.querySelectorAll(p)].some(el => !inDropped(el)); }
+      catch (e) { return false; }
+    });
+    for (const p of parts) {
+      // 罫は中間の灰にする。白地でも黒地でも見える（#555 は黒地で消える）。
+      css.push(p + " { border: 1px solid #888888; border-left: 4px solid #888888; padding: .7em .9em; margin: 1.2em 0; }");
+      css.push(p + " > b, " + p + " > strong { display: block; font-size: 1.05em; margin: 0 0 .35em; }");
+      css.push(p + " > p { margin: .35em 0; }");
+    }
+    log(t("epubCalloutApplied", { n: hits.length, sel: sel }), "ok");
+    if (!els.epubCalloutColor.checked) return { css: css, n: hits.length, kinds: 0 };
+
+    // 種類ごとの色は、著者が画面 / 印刷用に付けた色から拾う（この本なら .callout.cook 等）。
+    // class 属性はそのまま EPUB へ運ばれるので、同じクラスの組み合わせを選択子にできる。
+    const seen = new Map();
+    for (const el of hits) {
+      const key = classKey(el);
+      if (!key || seen.has(key)) continue;
+      let hex = null;
+      try {
+        const b = el.querySelector(":scope > b, :scope > strong");
+        hex = (b && parseAnyColor(gcs(b).color)) || parseAnyColor(gcs(el).borderLeftColor);
+      } catch (e) { hex = null; }
+      // 無彩色（黒・白・灰）は「著者が色を付けていない」に等しい。触ると黒見出しが
+      // 灰色になるだけなので、色の規則そのものを書かない。
+      if (hex && !isGrayish(hex)) seen.set(key, toneForDevice(hex));
+    }
+    for (const [key, hex] of seen) {
+      css.push(key + " { border-left-color: #" + hex + "; }");
+      css.push(key + " > b, " + key + " > strong { color: #" + hex + "; }");
+    }
+    if (seen.size) log(t("epubCalloutTinted", { kinds: seen.size }));
+    return { css: css, n: hits.length, kinds: seen.size };
+  }
+
+  // クラスの組み合わせをそのまま選択子にする。記号を含むクラス名はエスケープが要るので、
+  // その種類は色を付けず既定の枠のままにする（黙って壊れた CSS を書かない）。
+  function classKey(el) {
+    const cs = [...el.classList].filter(c => /^[A-Za-z_-][\w-]*$/.test(c));
+    if (!cs.length || cs.length !== el.classList.length) return null;
+    return "." + cs.join(".");
+  }
+
+  // 端末の地色は白とは限らない（Kindle のダークモードは黒地）。相対輝度 0.18 付近は
+  // 白地とも黒地ともコントラスト比 4.5 前後を取れる唯一の帯なので、色相は保ったまま
+  // 明るすぎる色は暗く、暗すぎる色は明るくして、その帯へ寄せる。
+  const TONE_TARGET = 0.18;
+  function toneForDevice(hex) {
+    let h = hex;
+    for (let i = 0; i < 24 && relLum(h) > TONE_TARGET * 1.15; i++) h = shadeHex(h, 0.9);
+    for (let i = 0; i < 24 && relLum(h) < TONE_TARGET * 0.85; i++) h = lightenHex(h, 0.12);
+    return h;
+  }
+  function lightenHex(hex, f) {
+    const c = [0, 2, 4].map(i => {
+      const v = parseInt(hex.substr(i, 2), 16);
+      return Math.max(0, Math.min(255, Math.round(v + (255 - v) * f)));
+    });
+    return c.map(v => v.toString(16).padStart(2, "0")).join("");
   }
 
   // ================= DOCX 変換 =================
@@ -3033,6 +3387,10 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
   // 目次の挿入位置を決めるため h1 段落を覚えておく。docx のオブジェクトに独自プロパティを
   // 生やすと XML 生成に影響しかねないので、WeakSet で外から印を付ける。
   const H1_PARAS = new WeakSet();
+  // 目次の位置に見出しを指定できるようにするため、h1 / h2 段落の文言も覚えておく。
+  // 覚える範囲を h1 / h2 に限るのは、位置の選択肢を作る fillHeadingPickers と
+  // 「何番目の見出しか」の数え方を一致させるため。
+  const HEAD_PARAS = new WeakMap();
   // 静的目次(ページ番号なしの内部リンク)用に、見出しの飛び先アンカーと一覧を集める。
   // convertToDocx の各回頭でリセットする。
   const TOC_ENTRIES = [];
@@ -3055,6 +3413,7 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
     applyCalloutShading(opts, effectiveBg(el));
     const p = new D.Paragraph(opts);
     if (lv === 1) H1_PARAS.add(p);
+    if (text && lv <= 2) HEAD_PARAS.set(p, text);
     if (text) TOC_ENTRIES.push({ anchor, level: lv, text });
     return p;
   }
@@ -3078,12 +3437,14 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
     const range = from + "-" + to;
     try {
       const title = (els.tocTitle.value || "").trim();
-      const block = [];
+      const pos = tocInsertIndex(out);
       // 目次見出し。KDP の論理目次認識用に "toc" ブックマークを兼ねる。
-      block.push(new D.Paragraph({
+      const headOpts = {
         style: "TOCHeading",
         children: [new D.Bookmark({ id: "toc", children: [new D.TextRun(title || "Table of Contents")] })],
-      }));
+      };
+      if (pos.pageBreak) headOpts.pageBreakBefore = true;
+      const block = [new D.Paragraph(headOpts)];
       const entries = TOC_ENTRIES.filter(e => e.level >= from && e.level <= to);
       for (const e of entries) {
         block.push(new D.Paragraph({
@@ -3094,14 +3455,35 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
         }));
       }
       if (!entries.length) log(t("tocEmpty", { range: range }), "warn");
-      // 書名 h1 の直後。h1 が無ければ文書の先頭。
-      const at = out.findIndex(p => H1_PARAS.has(p));
-      if (at < 0) log(t("tocNoH1"), "warn");
-      out.splice(at < 0 ? 0 : at + 1, 0, ...block);
-      log(t("tocAdded", { range: range, where: at < 0 ? t("tocAtTop") : t("tocAfterH1") }), "ok");
+      out.splice(pos.at, 0, ...block);
+      log(t("tocAdded", { range: range, where: pos.label }), "ok");
     } catch (err) {
       log(t("tocFail", { msg: err && err.message ? err.message : String(err) }), "err");
     }
+  }
+
+  // 目次をどこへ入れるか。既定は従来どおり書名 h1 の直後で、h1 が無ければ文書の先頭。
+  // 見出しを選んだ場合はその見出し段落の手前へ割り込ませ、目次の前で改ページする
+  // （ページの途中から始まる目次は事故に見える）。
+  // 段落は docx のオブジェクトなので、要素の同一性ではなく文言と「何番目か」で照合する。
+  function tocInsertIndex(out) {
+    const choice = els.tocPos.value;
+    if (choice === "top") return { at: 0, label: t("tocAtTop"), pageBreak: false };
+    const m = /^h:(\d+):([\s\S]*)$/.exec(choice || "");
+    if (m) {
+      const want = m[2];
+      let nth = Number(m[1]);
+      for (let i = 0; i < out.length; i++) {
+        if (HEAD_PARAS.get(out[i]) !== want) continue;
+        if (--nth > 0) continue;
+        return { at: i, label: t("tocPosBefore", { h: want }), pageBreak: true };
+      }
+      // 選択後に本文が差し替わった / その見出しが DOCX 側で出力されなかった場合。
+      log(t("tocPosLost", { h: want }), "warn");
+    }
+    const at = out.findIndex(p => H1_PARAS.has(p));
+    if (at < 0) { log(t("tocNoH1"), "warn"); return { at: 0, label: t("tocAtTop"), pageBreak: false }; }
+    return { at: at + 1, label: t("tocAfterH1"), pageBreak: false };
   }
 
   function imageRun(el, imgMap, opt) {
@@ -3177,7 +3559,10 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
 
   // 目次 ON のときだけ目次の詳細設定を表示
   function syncTocOptRow() {
-    els.tocOptRow.style.display = els.tocEnable.checked ? "flex" : "none";
+    const on = els.tocEnable.checked;
+    els.tocOptRow.style.display = on ? "flex" : "none";
+    els.tocPosRow.style.display = on ? "flex" : "none";
+    els.tocPosNoteRow.style.display = on ? "" : "none";
   }
   els.tocEnable.addEventListener("change", syncTocOptRow);
   syncTocOptRow();
@@ -3188,6 +3573,15 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
   }
   els.epubTocPage.addEventListener("change", syncEpubTocPageRow);
   syncEpubTocPageRow();
+
+  // 囲みを枠にしないなら、セレクタも色分けも意味がないので隠す
+  function syncEpubCalloutRow() {
+    const on = els.epubCallout.checked ? "flex" : "none";
+    els.epubCalloutRow.style.display = on;
+    els.epubCalloutColorRow.style.display = on;
+  }
+  els.epubCallout.addEventListener("change", syncEpubCalloutRow);
+  syncEpubCalloutRow();
 
   // 画像を埋め込まないときは形式の選択肢を出さない
   function syncImgModeRow() {
