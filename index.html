@@ -87,6 +87,30 @@
     max-height: 300px; overflow: auto; padding: 10px; margin-top: 8px;
   }
   code { font-family: ui-monospace, Consolas, monospace; }
+  /* EPUB プレビュー: 左に目次、右に本文。本文は iframe で本の CSS を隔離する */
+  .epv-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; font-size: .9rem; }
+  .epv-shell { display: flex; padding: 0; overflow: hidden; }
+  .epv-toc {
+    flex: 0 0 250px; width: 250px; overflow: auto; padding: 10px 14px 10px 8px;
+    border-right: 1px solid #e2e4e9; font-size: .84rem;
+    height: calc(100vh - 300px); min-height: 380px;
+  }
+  .epv-toc a { display: block; padding: 4px 8px; border-radius: 6px; color: inherit; text-decoration: none; }
+  .epv-toc a:hover { background: #eef0f6; }
+  .epv-toc a.active { background: #4f46e5; color: #fff; }
+  .epv-toc a.lv2 { padding-left: 20px; }
+  .epv-toc a.lv3 { padding-left: 34px; font-size: .95em; }
+  .epv-toc a.lv4, .epv-toc a.lv5, .epv-toc a.lv6 { padding-left: 48px; font-size: .92em; }
+  .epv-page { flex: 1 1 auto; border: 0; background: #fff; height: calc(100vh - 300px); min-height: 380px; }
+  @media (prefers-color-scheme: dark) {
+    .epv-toc { border-right-color: #3a3d44; }
+    .epv-toc a:hover { background: #2c3040; }
+  }
+  @media (max-width: 720px) {
+    .epv-shell { flex-direction: column; }
+    .epv-toc { flex: none; width: auto; height: 160px; min-height: 0; border-right: 0; border-bottom: 1px solid #e2e4e9; }
+    .epv-page { height: 60vh; }
+  }
   .progbar { height: 10px; background: #e2e4e9; border-radius: 6px; overflow: hidden; }
   #progBar { height: 100%; width: 0%; background: linear-gradient(90deg, #4f46e5, #7c3aed); transition: width .2s ease; }
   @media (prefers-color-scheme: dark) { .progbar { background: #3a3d44; } }
@@ -136,14 +160,20 @@
 </header>
 <main>
   <div class="tabs" role="tablist">
-    <button type="button" class="tab active" data-tab="convert" data-i18n="tabConvert">HTML → EPUB / DOCX</button>
+    <button type="button" class="tab active" data-tab="epub" data-i18n="tabEpub">HTML → EPUB</button>
+    <button type="button" class="tab" data-tab="docx" data-i18n="tabDocx">HTML → DOCX</button>
+    <button type="button" class="tab" data-tab="svg" data-i18n="tabSvg">Export figures</button>
     <button type="button" class="tab" data-tab="join" data-i18n="tabJoin">Join chapter HTML</button>
     <button type="button" class="tab" data-tab="split" data-i18n="tabSplit">Split single HTML</button>
     <button type="button" class="tab" data-tab="figplace" data-i18n="tabFigplace">Figure placement</button>
+    <button type="button" class="tab" data-tab="epubview" data-i18n="tabEpubView">EPUB preview</button>
   </div>
-  <div class="tabpanel active" data-panel="convert">
-  <div class="card">
-    <h2 data-i18n="s1Title">1. Input HTML</h2>
+  <!-- 入力と共通設定はどの出力にも効くので、タブの外に1つだけ置く。
+       ここに何を入れるかは見た目でなくコードの参照で決めた：3つの変換のうち
+       2つ以上が読む設定だけが共通。片方しか読まない設定を共通に混ぜると、
+       「どちらに効くのか分からない」という元の状態に戻る。 -->
+  <div class="card" id="cardInput">
+    <h2 data-i18n="s1Title">Input HTML</h2>
     <div class="row">
       <input type="file" id="fileInput" accept=".html,.htm,text/html" hidden>
       <button type="button" class="btn secondary" id="fileBtn" data-i18n="chooseFile">Choose HTML file</button>
@@ -156,60 +186,44 @@
     </details>
   </div>
 
-  <div class="card">
-    <h2 data-i18n="s2Title">2. Settings</h2>
+  <div class="card" id="cardCommon">
+    <h2 data-i18n="s2Title">Common settings</h2>
+    <p class="muted" data-i18n="commonNote">(These are the settings more than one output reads, so they live here instead of being repeated — and contradicted — on each tab. Everything below a tab affects that output only.)</p>
     <fieldset>
-      <legend data-i18n="legendSvg">SVG image export format</legend>
-      <label class="row"><input type="checkbox" id="expSvg" checked> <span data-i18n="optSvg">SVG (vector original)</span></label>
-      <label class="row"><input type="checkbox" id="expPng" checked> <span data-i18n="optPng">PNG (raster)</span></label>
+      <legend data-i18n="legendCommonRead">Reading the page (EPUB / DOCX / figures)</legend>
+      <label class="row"><input type="checkbox" id="printMode" checked> <span data-i18n="printModeLabel">Apply the page's print styles (@media print) — recommended for KDP</span></label>
+    </fieldset>
+    <fieldset>
+      <legend data-i18n="legendCommonColor">Colors (EPUB / DOCX / figures)</legend>
+      <label class="row"><input type="checkbox" id="forceContrast" checked> <span data-i18n="contrastLabel">Body text black for contrast (white background)</span></label>
+      <label class="row"><input type="checkbox" id="figContrast" checked> <span data-i18n="figContrastLabel">Fix low-contrast colors in figures</span></label>
+    </fieldset>
+    <fieldset>
+      <legend data-i18n="legendCommonFig">Figure resolution (EPUB / DOCX / figures)</legend>
       <label class="row"><span data-i18n="pngScaleLabel">PNG resolution scale</span>
         <input type="number" id="pngScale" value="2" min="1" max="8" step="1"> ×
         <span class="muted" data-i18n="pngScaleNote">(1× = display size. KDP recommends ~300dpi → 2–3× is a good target)</span>
       </label>
-    </fieldset>
-    <fieldset>
-      <legend data-i18n="legendDocx">DOCX conversion</legend>
-      <label class="row"><input type="checkbox" id="printMode" checked> <span data-i18n="printModeLabel">Apply the page's print styles (@media print) — recommended for KDP</span></label>
-      <label class="row"><input type="checkbox" id="embedImages" checked> <span data-i18n="embedImagesLabel">Embed images in DOCX</span></label>
-      <label class="row" id="imgModeRow"><span data-i18n="imgModeLabel">Image format</span>
-        <select id="imgMode" style="padding:4px 6px; border:1px solid #ccc; border-radius:6px;">
-          <option value="png" data-i18n="imgModePng">Rasterize everything to PNG (max compatibility)</option>
-          <option value="vector" data-i18n="imgModeVector">Figures (SVG) stay vector, photos become PNG</option>
-          <option value="original" data-i18n="imgModeOriginal">Keep original format (SVG→SVG, PNG→PNG, JPEG→JPEG)</option>
-        </select>
-      </label>
-      <label class="row" id="minLongRow"><span data-i18n="minLongLabel">Minimum long side of embedded figures</span>
+      <label class="row"><span data-i18n="minLongLabel">Minimum long side of embedded figures</span>
         <input type="number" id="minLongPx" value="1600" min="0" max="4000" step="100"> px
         <span class="muted" data-i18n="minLongNote">(0 = off. KDP re-compresses every interior image and converts PNG to JPEG, so a low-resolution figure arrives blurry. Amazon's guidance is ~1600 px on the longest side; figures are upscaled to reach this regardless of their on-page size.)</span>
       </label>
-      <p class="muted" id="imgModeNote" data-i18n="imgModeNote">(OOXML requires a PNG fallback next to every SVG, so a vector DOCX contains both and is larger. Kindle reflowable books normally show the PNG — vector pays off in Word and in print. "Keep original" avoids re-encoding, so JPEG photos stay JPEG instead of ballooning into PNG.)</p>
-      <label class="row"><input type="checkbox" id="h1PageBreak" checked> <span data-i18n="h1PageBreakLabel">Page break before h1 (KDP chapter break)</span></label>
-      <label class="row"><input type="checkbox" id="tocEnable" checked> <span data-i18n="tocEnableLabel">Insert a Word table-of-contents field (after the title h1)</span></label>
-      <label class="row" id="tocOptRow"><span data-i18n="tocTitleLabel">TOC heading</span>
+    </fieldset>
+    <fieldset>
+      <legend data-i18n="legendCommonToc">Table of contents (EPUB / DOCX)</legend>
+      <label class="row"><span data-i18n="tocTitleLabel">TOC heading</span>
         <input type="text" id="tocTitle" value="目次" style="width:160px; padding:4px 6px; border:1px solid #ccc; border-radius:6px;">
         <span data-i18n="tocLevelsLabel">Heading levels</span>
         <input type="number" id="tocFrom" value="1" min="1" max="6" step="1"> –
-        <input type="number" id="tocTo" value="3" min="1" max="6" step="1">
-        <span class="muted" data-i18n="tocNote">(A real TOC field. Word fills in the page numbers when the field updates: Ctrl+A → F9, or "Update table")</span>
+        <input type="number" id="tocTo" value="2" min="1" max="6" step="1">
       </label>
-      <label class="row" id="tocPosRow"><span data-i18n="tocPosLabel">Where to put it</span>
-        <select id="tocPos" style="flex:1; min-width:220px; max-width:520px; padding:4px 6px; border:1px solid #ccc; border-radius:6px;">
-          <option value="afterH1" data-i18n="tocPosAfterH1">Right after the title h1 (default)</option>
-          <option value="top" data-i18n="tocPosTop">The very front</option>
-        </select>
-      </label>
-      <p class="muted" id="tocPosNoteRow" data-i18n="tocPosNote">(The list fills in with the book's h1/h2 once you load a file; picking one puts the TOC in front of that heading — so you can drop it right before, say, PART I. A heading you choose here also gets a page break, because a TOC that starts halfway down a page reads as an accident.)</p>
-      <label class="row"><input type="checkbox" id="forceContrast" checked> <span data-i18n="contrastLabel">Body text black for contrast (white background)</span></label>
-      <label class="row"><input type="checkbox" id="figContrast" checked> <span data-i18n="figContrastLabel">Fix low-contrast colors in figures</span></label>
-      <label class="row"><input type="checkbox" id="calloutBg" checked> <span data-i18n="calloutBgLabel">Keep colored-background blocks (columns/callouts)</span></label>
-      <label class="row" id="calloutThreshRow"><span data-i18n="calloutThreshLabel">Background lightness threshold</span>
-        <input type="number" id="calloutThresh" value="0.93" min="0.5" max="1" step="0.01">
-        <span class="muted" data-i18n="calloutThreshNote">(relative luminance 0–1; backgrounds lighter than this are treated as plain. Higher = shade paler colors too)</span>
-      </label>
-      <label class="row"><span data-i18n="maxImgWLabel">Max image width</span>
-        <input type="number" id="maxImgW" value="500" min="100" max="1200" step="10"> px
-      </label>
+      <p class="muted" data-i18n="tocNote">(Both outputs build a table of contents from the same headings, so the wording and the level range are set once here. Whether each output actually gets one, and where it goes, is on its own tab.)</p>
     </fieldset>
+  </div>
+
+  <div class="tabpanel active" data-panel="epub">
+  <div class="card">
+    <h2 data-i18n="sEpubTitle">EPUB settings</h2>
     <fieldset>
       <legend data-i18n="legendEpub">EPUB (recommended for Kindle)</legend>
       <p class="muted" data-i18n="epubNote">(KDP prefers EPUB 3 and converts it to KFX with the least loss. Unlike DOCX, images keep their own pixels — a DOCX caps figure quality at its on-page inches, which is what makes figures look blurry. Kindle's Enhanced Typesetting does not render SVG, so figures are embedded as high-resolution raster, sized by CSS.)</p>
@@ -229,9 +243,12 @@
           <option value="0" data-i18n="epubSplitNone">Do not split</option>
         </select>
       </label>
+      <label class="row"><input type="checkbox" id="epubH1PageBreak" checked> <span data-i18n="epubH1BreakLabel">Page break before h1</span></label>
+      <label class="row"><input type="checkbox" id="epubH2PageBreak" checked> <span data-i18n="epubH2BreakLabel">Page break before h2</span></label>
+      <p class="muted" data-i18n="epubBreakNote">(Written into the EPUB stylesheet as page-break-before. The heading you split chapters at is already at the start of its own file, so it starts a page whether or not you tick it here — these are for the levels below it, e.g. h2 chapters inside an h1 part. Open the EPUB preview tab to see where the breaks land.)</p>
       <label class="row"><span data-i18n="epubTocDepthLabel">Heading levels in the TOC</span>
         <select id="epubTocDepth" style="padding:4px 6px; border:1px solid #ccc; border-radius:6px;">
-          <option value="docx" data-i18n="epubTocDepthDocx">Same as the DOCX TOC setting above</option>
+          <option value="docx" data-i18n="epubTocDepthDocx">Same as the common TOC setting</option>
           <option value="1" data-i18n="epubTocDepth1">h1 only</option>
           <option value="2" data-i18n="epubTocDepth2">h1–h2</option>
           <option value="3" data-i18n="epubTocDepth3">h1–h3</option>
@@ -249,20 +266,67 @@
       </label>
       <p class="muted" data-i18n="epubTocPageNote">(This is the TOC the reader can page through, and it is separate from the navigation list Kindle shows in its side panel — that one is always generated. The list fills in with the book's h1/h2 once you load a file, so you can drop the TOC right in front of, say, PART I. Entries use the heading levels chosen above. The single HTML is not modified: the page exists only inside the EPUB.)</p>
       <label class="row"><input type="checkbox" id="epubTextColor" checked> <span data-i18n="epubTextColorLabel">Keep text colors (body and headings)</span></label>
-      <p class="muted" data-i18n="epubTextColorNote">(The HTML's own &lt;style&gt; is not carried into the EPUB, so without this every character comes out in the reader's default color. The color is written inline only where it differs from the parent — inheritance covers the rest. Which colors survive is decided by "Body text black for contrast" in the DOCX settings above, the same rule the DOCX conversion uses: on a white page a color below 4.5:1, or a grey, is not a color choice but a screen theme. Turn print mode on first so the colors read are the ones meant for paper.)</p>
+      <p class="muted" data-i18n="epubTextColorNote">(The HTML's own &lt;style&gt; is not carried into the EPUB, so without this every character comes out in the reader's default color. The color is written inline only where it differs from the parent — inheritance covers the rest. Which colors survive is decided by "Body text black for contrast" in the common settings, the same rule the DOCX conversion uses: on a white page a color below 4.5:1, or a grey, is not a color choice but a screen theme. Turn print mode on first so the colors read are the ones meant for paper.)</p>
       <label class="row"><input type="checkbox" id="epubCallout" checked> <span data-i18n="epubCalloutLabel">Draw columns / callouts as boxes</span></label>
       <label class="row" id="epubCalloutRow"><span data-i18n="epubCalloutSelLabel">Selector</span>
         <input type="text" id="epubCalloutSel" value=".callout, aside, .column, .box" style="flex:1; min-width:200px; padding:4px 6px; border:1px solid #ccc; border-radius:6px;">
       </label>
-      <label class="row" id="epubCalloutColorRow"><input type="checkbox" id="epubCalloutColor"> <span data-i18n="epubCalloutColorLabel">Color the heading line by callout type (Fire / apps; E Ink shows it as grey)</span></label>
+      <label class="row" id="epubCalloutColorRow"><input type="checkbox" id="epubCalloutColor" checked> <span data-i18n="epubCalloutColorLabel">Color the heading line by callout type (Fire / apps; E Ink shows it as grey)</span></label>
       <p class="muted" data-i18n="epubCalloutNote">(The HTML's own &lt;style&gt; is not carried into the EPUB — screen colors break on a device — so without this a callout collapses into plain body text. This rebuilds it from what KDP reliably renders: a rule around the block and the leading &lt;b&gt; as a heading line. No background color: E Ink turns it into a grey slab, and in dark mode text with no color of its own becomes unreadable on it.)</p>
       <label class="row"><span data-i18n="epubExcludeLabel">Exclude selector</span>
         <input type="text" id="epubExclude" value=".noprint, .no-print, .screen-only" style="flex:1; min-width:200px; padding:4px 6px; border:1px solid #ccc; border-radius:6px;">
       </label>
       <p class="muted" data-i18n="epubExcludeNote">(On-screen UI — toolbars, print buttons, nav bars — is not part of the book. Anything your print styles hide is dropped automatically; add selectors here for UI that stays visible when printing. Scripts and form controls are always dropped.)</p>
     </fieldset>
+  </div>
+  <div class="card">
+    <h2 data-i18n="s3Title">Run</h2>
+    <div class="btns">
+      <button class="btn" id="btnEpub" disabled data-i18n="btnEpub">Convert &amp; download EPUB</button>
+    </div>
+    <p class="muted" data-i18n="clientNote">※ All conversion runs in your browser (files are never sent to a server).</p>
+  </div>
+  </div>
+
+  <div class="tabpanel" data-panel="docx">
+  <div class="card">
+    <h2 data-i18n="sDocxTitle">DOCX settings</h2>
     <fieldset>
-      <legend data-i18n="legendTrim">Trim size &amp; page (DOCX page setup)</legend>
+      <legend data-i18n="legendDocx">DOCX conversion</legend>
+      <label class="row"><input type="checkbox" id="embedImages" checked> <span data-i18n="embedImagesLabel">Embed images in DOCX</span></label>
+      <label class="row" id="imgModeRow"><span data-i18n="imgModeLabel">Image format</span>
+        <select id="imgMode" style="padding:4px 6px; border:1px solid #ccc; border-radius:6px;">
+          <option value="png" data-i18n="imgModePng">Rasterize everything to PNG (max compatibility)</option>
+          <option value="vector" data-i18n="imgModeVector">Figures (SVG) stay vector, photos become PNG</option>
+          <option value="original" data-i18n="imgModeOriginal">Keep original format (SVG→SVG, PNG→PNG, JPEG→JPEG)</option>
+        </select>
+      </label>
+      <p class="muted" id="imgModeNote" data-i18n="imgModeNote">(OOXML requires a PNG fallback next to every SVG, so a vector DOCX contains both and is larger. Kindle reflowable books normally show the PNG — vector pays off in Word and in print. "Keep original" avoids re-encoding, so JPEG photos stay JPEG instead of ballooning into PNG.)</p>
+      <label class="row"><input type="checkbox" id="h1PageBreak" checked> <span data-i18n="h1PageBreakLabel">Page break before h1 (KDP chapter break)</span></label>
+      <label class="row"><input type="checkbox" id="h2PageBreak"> <span data-i18n="h2PageBreakLabel">Page break before h2</span></label>
+      <p class="muted" data-i18n="pageBreakNote">(A book whose h1 is the part title and h2 the chapters needs h2 too, or the chapters run on mid-page. With both on, a part title gets a page of its own and the chapter starts on the next one.)</p>
+      <label class="row"><input type="checkbox" id="tocEnable" checked> <span data-i18n="tocEnableLabel">Insert a Word table-of-contents field (after the title h1)</span></label>
+      <label class="row" id="tocPosRow"><span data-i18n="tocPosLabel">Where to put it</span>
+        <select id="tocPos" style="flex:1; min-width:220px; max-width:520px; padding:4px 6px; border:1px solid #ccc; border-radius:6px;">
+          <option value="afterH1" data-i18n="tocPosAfterH1">Right after the title h1 (default)</option>
+          <option value="top" data-i18n="tocPosTop">The very front</option>
+        </select>
+      </label>
+      <p class="muted" id="tocPosNoteRow" data-i18n="tocPosNote">(The list fills in with the book's h1/h2 once you load a file; picking one puts the TOC in front of that heading — so you can drop it right before, say, PART I. A heading you choose here also gets a page break, because a TOC that starts halfway down a page reads as an accident.)</p>
+      <label class="row"><input type="checkbox" id="calloutBg" checked> <span data-i18n="calloutBgLabel">Keep colored-background blocks (columns/callouts)</span></label>
+      <label class="row" id="calloutThreshRow"><span data-i18n="calloutThreshLabel">Background lightness threshold</span>
+        <input type="number" id="calloutThresh" value="0.93" min="0.5" max="1" step="0.01">
+        <span class="muted" data-i18n="calloutThreshNote">(relative luminance 0–1; backgrounds lighter than this are treated as plain. Higher = shade paler colors too)</span>
+      </label>
+      <label class="row"><span data-i18n="maxImgWLabel">Max image width</span>
+        <input type="number" id="maxImgW" value="500" min="100" max="1200" step="10"> px
+      </label>
+    </fieldset>
+  </div>
+  <div class="card">
+    <h2 data-i18n="sTrimTitle">Page setup</h2>
+    <fieldset>
+      <legend data-i18n="legendTrim">Trim size &amp; page</legend>
       <label class="row"><span data-i18n="unitLabel">Unit</span>
         <select id="unitSel">
           <option value="in" selected>inch</option>
@@ -319,19 +383,31 @@
   </div>
 
   <div class="card">
-    <h2 data-i18n="s3Title">3. Run</h2>
+    <h2 data-i18n="s3Title">Run</h2>
     <div class="btns">
-      <button class="btn" id="btnEpub" disabled data-i18n="btnEpub">Convert &amp; download EPUB</button>
       <button class="btn" id="btnDocx" disabled data-i18n="btnDocx">Convert &amp; download DOCX</button>
-      <button class="btn secondary" id="btnSvg" disabled data-i18n="btnSvg">Export SVG images (zip)</button>
-    </div>
-    <div id="progWrap" style="display:none; margin-top:14px;">
-      <div class="progbar"><div id="progBar"></div></div>
-      <p class="muted" id="progText" style="margin:6px 0 0; font-variant-numeric: tabular-nums;"></p>
     </div>
     <p class="muted" data-i18n="clientNote">※ All conversion runs in your browser (files are never sent to a server).</p>
   </div>
+  </div>
 
+  <div class="tabpanel" data-panel="svg">
+    <div class="card">
+      <h2 data-i18n="sSvgTitle">Figure export</h2>
+      <fieldset>
+        <legend data-i18n="legendSvg">SVG image export format</legend>
+        <label class="row"><input type="checkbox" id="expSvg" checked> <span data-i18n="optSvg">SVG (vector original)</span></label>
+        <label class="row"><input type="checkbox" id="expPng" checked> <span data-i18n="optPng">PNG (raster)</span></label>
+        <p class="muted" data-i18n="svgScaleNote">(The PNG resolution scale is in the common settings above, because the EPUB and DOCX conversions rasterize with the same number.)</p>
+      </fieldset>
+    </div>
+    <div class="card">
+      <h2 data-i18n="s3Title">Run</h2>
+      <div class="btns">
+        <button class="btn secondary" id="btnSvg" disabled data-i18n="btnSvg">Export SVG images (zip)</button>
+      </div>
+      <p class="muted" data-i18n="clientNote">※ All conversion runs in your browser (files are never sent to a server).</p>
+    </div>
   </div>
 
   <div class="tabpanel" data-panel="join">
@@ -378,8 +454,42 @@
     <iframe id="figplaceFrame" title="figplace" style="width:100%; height:calc(100vh - 180px); min-height:520px; border:0; display:block; background:#0f1221"></iframe>
   </div>
 
+  <div class="tabpanel" data-panel="epubview">
+    <div class="card">
+      <h2 data-i18n="epvTitle">Read an EPUB</h2>
+      <div class="row">
+        <input type="file" id="epvFile" accept=".epub,application/epub+zip" hidden>
+        <button type="button" class="btn secondary" id="epvOpenBtn" data-i18n="epvOpenBtn">Choose EPUB file</button>
+        <button type="button" class="btn" id="epvLastBtn" disabled data-i18n="epvLastBtn">Open the EPUB just built</button>
+        <span class="muted" id="epvName" data-i18n="epvNone">No EPUB opened</span>
+      </div>
+      <p class="muted" data-i18n="epvNote">(Opens the file in your browser — nothing is uploaded. The chapters are read in spine order and the table of contents comes from the EPUB's own nav. What you can check here is the content and the structure: where chapters split, whether the TOC links land, whether figures made it, and where the page breaks fall (marked with a dashed rule). Line breaking and font are your browser's, not a Kindle's, so run Kindle Previewer before you upload.)</p>
+      <div class="epv-bar" id="epvBar" style="display:none">
+        <button type="button" class="btn secondary" id="epvPrev" data-i18n="epvPrev">‹ Previous</button>
+        <button type="button" class="btn secondary" id="epvNext" data-i18n="epvNext">Next ›</button>
+        <span class="muted" id="epvPos"></span>
+        <span style="flex:1 1 auto"></span>
+        <span data-i18n="epvFontLabel">Text size</span>
+        <input type="range" id="epvFont" min="70" max="200" step="10" value="100" style="width:120px">
+        <span class="muted" id="epvFontVal">100%</span>
+      </div>
+    </div>
+    <div class="card epv-shell" id="epvShell" style="display:none">
+      <div class="epv-toc" id="epvToc"></div>
+      <!-- sandbox: 本の中の JS を動かさない。allow-same-origin は残す（親から
+           contentDocument を読んでリンクを解決し、改ページの印を付けるため）。 -->
+      <iframe class="epv-page" id="epvFrame" title="EPUB preview" sandbox="allow-same-origin"></iframe>
+    </div>
+  </div>
+
+  <!-- 進捗とログはどの変換も書くので、タブの外に1つだけ。実行ボタンは形式ごとに
+       分かれたが、走っている最中に見る場所は1か所のままにする。 -->
   <div class="card">
     <h2 data-i18n="logTitle">Log</h2>
+    <div id="progWrap" style="display:none; margin:0 0 12px;">
+      <div class="progbar"><div id="progBar"></div></div>
+      <p class="muted" id="progText" style="margin:6px 0 0; font-variant-numeric: tabular-nums;"></p>
+    </div>
     <pre class="log" id="log" data-i18n="waiting">Waiting…</pre>
   </div>
 </main>
@@ -398,7 +508,7 @@
       appTitle: "html2docx",
       appSubtitle: "Convert any HTML into a KDP-ready DOCX / export SVG images as PNG & SVG. Single file, runs entirely in your browser.",
       language: "Language",
-      s1Title: "1. Input HTML",
+      s1Title: "Input HTML",
       joinBtn: "Join chapter files (book folder)",
       joinNone: "No folder selected",
       joinNote: "(Pick the book/ folder produced by the Split tab. The chapters are reassembled into the single HTML using manifest.json for order. Nothing is written until you press \"Save as…\", which lets you name the file or overwrite the original. The result is also handed to the conversion tab, so you can read it through and convert it without reloading anything. This button is the one you run; tool/htmlbook/htmlbook.py is the same procedure as a CLI, kept as an independent checker.)",
@@ -414,10 +524,23 @@
       joinNoFrame: "_frame.html not found in the selected folder",
       joinNoManifest: "manifest.json not found in the selected folder",
       joinNoMark: "_frame.html does not contain {mark}",
-      tabConvert: "HTML → EPUB / DOCX",
+      tabEpub: "HTML → EPUB",
+      tabDocx: "HTML → DOCX",
+      tabSvg: "Export figures",
+      sEpubTitle: "EPUB settings",
+      sDocxTitle: "DOCX settings",
+      sTrimTitle: "Page setup",
+      sSvgTitle: "Figure export",
+      commonNote: "(These are the settings more than one output reads, so they live here instead of being repeated — and contradicted — on each tab. Everything below a tab affects that output only.)",
+      legendCommonRead: "Reading the page (EPUB / DOCX / figures)",
+      legendCommonColor: "Colors (EPUB / DOCX / figures)",
+      legendCommonFig: "Figure resolution (EPUB / DOCX / figures)",
+      legendCommonToc: "Table of contents (EPUB / DOCX)",
+      svgScaleNote: "(The PNG resolution scale is in the common settings above, because the EPUB and DOCX conversions rasterize with the same number.)",
       tabJoin: "Join chapter HTML",
       tabSplit: "Split single HTML",
       tabFigplace: "Figure placement",
+      tabEpubView: "EPUB preview",
       splitTitle: "Split a single HTML into chapter files",
       splitBtn: "Choose single HTML",
       splitSaveBtn: "Write book folder…",
@@ -480,7 +603,7 @@
       noFileChosen: "No file selected",
       fileHint: "Select an HTML file.",
       previewSummary: "Preview (live render of the loaded HTML)",
-      s2Title: "2. Settings",
+      s2Title: "Common settings",
       legendSvg: "SVG image export format",
       optSvg: "SVG (vector original)",
       optPng: "PNG (raster)",
@@ -502,10 +625,12 @@
       svgFallbackFail: "Could not rasterize the PNG fallback an embedded SVG requires ({msg}); this figure was not embedded.",
       imgFmtSummary: "Image embedding [{mode}]: {detail}",
       h1PageBreakLabel: "Page break before h1 (KDP chapter break)",
+      h2PageBreakLabel: "Page break before h2",
+      pageBreakNote: "(A book whose h1 is the part title and h2 the chapters needs h2 too, or the chapters run on mid-page. With both on, a part title gets a page of its own and the chapter starts on the next one.)",
       tocEnableLabel: "Insert a hyperlinked table of contents (no page numbers, after the title h1)",
       tocTitleLabel: "TOC heading",
       tocLevelsLabel: "Heading levels",
-      tocNote: "(A static, clickable TOC with no page numbers — displays correctly in Kindle/KDP. Headings keep their styles, so Kindle also builds its Go-To navigation.)",
+      tocNote: "(Both outputs build their table of contents from the same headings, so the wording and the level range are set once, here. What comes out is a static, clickable TOC with no page numbers — it displays correctly in Kindle/KDP. Headings keep their styles, so Kindle also builds its Go-To navigation. Whether each output gets a TOC at all, and where it goes, is on its own tab.)",
       tocAdded: "Inserted a hyperlinked TOC into the DOCX (levels {range}) {where}. No page numbers — each entry links to its heading.",
       tocAtTop: "at the top of the document",
       tocPosLabel: "Where to put it",
@@ -540,7 +665,7 @@
       epubSplitPicked: "Chapter split: h{lv} ({n} chapters).",
       epubSplitOff: "Chapter split off — the whole book is one XHTML file ({kb} KB).",
       epubTextColorLabel: "Keep text colors (body and headings)",
-      epubTextColorNote: "(The HTML's own <style> is not carried into the EPUB, so without this every character comes out in the reader's default color. The color is written inline only where it differs from the parent — inheritance covers the rest. Which colors survive is decided by \"Body text black for contrast\" in the DOCX settings above, the same rule the DOCX conversion uses: on a white page a color below 4.5:1, or a grey, is not a color choice but a screen theme. Turn print mode on first so the colors read are the ones meant for paper.)",
+      epubTextColorNote: "(The HTML's own <style> is not carried into the EPUB, so without this every character comes out in the reader's default color. The color is written inline only where it differs from the parent — inheritance covers the rest. Which colors survive is decided by \"Body text black for contrast\" in the common settings, the same rule the DOCX conversion uses: on a white page a color below 4.5:1, or a grey, is not a color choice but a screen theme. Turn print mode on first so the colors read are the ones meant for paper.)",
       epubTextColorApplied: "Text color: kept on {n} elements.",
       epubTextColorNone: "Text color: nothing differed from the default, so no color was written.",
       epubCalloutLabel: "Draw columns / callouts as boxes",
@@ -562,7 +687,7 @@
       msTocOff: "Single-HTML TOC: not generated (join setting).",
       msTocPosLost: "The TOC position \"{at}\" is not in the spec, so nothing was written.",
       epubTocDepthLabel: "Heading levels in the TOC",
-      epubTocDepthDocx: "Same as the DOCX TOC setting above",
+      epubTocDepthDocx: "Same as the common TOC setting",
       epubTocDepth1: "h1 only",
       epubTocDepth2: "h1–h2",
       epubTocDepth3: "h1–h3",
@@ -589,7 +714,29 @@
       epubFatal: "Fatal error during EPUB conversion: {msg}",
       epubSummary: "EPUB: {chapters} chapter(s), {images} image(s), TOC {toc} entries, minLongSide={px}px",
       epubImgFail: "Could not embed an image in the EPUB ({msg}); a placeholder was inserted.",
-      legendTrim: "Trim size & page (DOCX page setup)",
+      epubH1BreakLabel: "Page break before h1",
+      epubH2BreakLabel: "Page break before h2",
+      epubBreakNote: "(Written into the EPUB stylesheet as page-break-before. The heading you split chapters at is already at the start of its own file, so it starts a page whether or not you tick it here — these are for the levels below it, e.g. h2 chapters inside an h1 part. Open the EPUB preview tab to see where the breaks land.)",
+      epubBreakUsed: "EPUB page break: before {levels}.",
+      epvTitle: "Read an EPUB",
+      epvOpenBtn: "Choose EPUB file",
+      epvLastBtn: "Open the EPUB just built",
+      epvNone: "No EPUB opened",
+      epvNote: "(Opens the file in your browser — nothing is uploaded. The chapters are read in spine order and the table of contents comes from the EPUB's own nav. What you can check here is the content and the structure: where chapters split, whether the TOC links land, whether figures made it, and where the page breaks fall (marked with a dashed rule). Line breaking and font are your browser's, not a Kindle's, so run Kindle Previewer before you upload.)",
+      epvPrev: "‹ Previous",
+      epvNext: "Next ›",
+      epvFontLabel: "Text size",
+      epvOpened: "Opened {name} — {n} section(s), {toc} TOC entries.",
+      epvFail: "Could not open the EPUB: {msg}",
+      epvMissing: "{path} is not in the EPUB.",
+      epvNoNav: "This EPUB has no navigation document, so the list on the left is the spine order instead.",
+      epvSpineEmpty: "The EPUB spine is empty — there is nothing to show.",
+      epvSectionFail: "Could not render {path}: {msg}",
+      epvExtLink: "External link ({href}) — opened in a new tab.",
+      epvLinkLost: "The link target ({href}) is not a section of this book, so nothing was opened.",
+      epvPageBreak: "page break",
+      epvBuilt: "You can read it in the EPUB preview tab without leaving the page.",
+      legendTrim: "Trim size & page",
       unitLabel: "Unit",
       baseFontLabel: "Base font (body & headings)",
       trimSizeLabel: "Trim size",
@@ -602,7 +749,7 @@
       marginsLabel: "Margins (top / bottom / inside / outside)",
       gutterLabel: "Gutter (binding)",
       gutterNote: "(more pages → wider inside. ≤150p is safe with inside 0.75)",
-      s3Title: "3. Run",
+      s3Title: "Run",
       btnDocx: "Convert & download DOCX",
       btnSvg: "Export SVG images (zip)",
       clientNote: "※ All conversion runs in your browser (files are never sent to a server).",
@@ -650,7 +797,7 @@
       appTitle: "html2docx",
       appSubtitle: "任意の HTML を KDP 対応 DOCX へ変換 ／ SVG 画像を PNG・SVG で Export。単一ファイル・完全ブラウザ内動作。",
       language: "言語",
-      s1Title: "1. 入力 HTML",
+      s1Title: "入力 HTML",
       joinBtn: "章別HTMLを結合（book フォルダ）",
       joinNone: "フォルダ未選択",
       joinNote: "（分割タブが作った book/ フォルダを選びます。manifest.json の順序で章を単一HTMLへ戻します。「名前を付けて保存」を押すまで書き込みは起きません（名前を決めても、元の単一HTMLへ上書きしても構いません）。結果は変換タブへも引き渡すので、読み込み直さずそのまま通読・変換できます。運用の入口はこのボタンです。tool/htmlbook/htmlbook.py は同じ手順の CLI で、独立した検証器として残してあります）",
@@ -666,10 +813,23 @@
       joinNoFrame: "選んだフォルダに _frame.html がありません",
       joinNoManifest: "選んだフォルダに manifest.json がありません",
       joinNoMark: "_frame.html に {mark} がありません",
-      tabConvert: "HTML → EPUB / DOCX 変換",
+      tabEpub: "HTML → EPUB",
+      tabDocx: "HTML → DOCX",
+      tabSvg: "図の書き出し",
+      sEpubTitle: "EPUB の設定",
+      sDocxTitle: "DOCX の設定",
+      sTrimTitle: "判型とページ",
+      sSvgTitle: "図の書き出し設定",
+      commonNote: "（2つ以上の出力が読む設定をここへ集めました。タブごとに同じ設定を置くと、どちらが効いているのか分からなくなるためです。各タブの中にあるものは、その出力にだけ効きます）",
+      legendCommonRead: "ページの読み取り（EPUB / DOCX / 図）",
+      legendCommonColor: "色（EPUB / DOCX / 図）",
+      legendCommonFig: "図の解像度（EPUB / DOCX / 図）",
+      legendCommonToc: "目次（EPUB / DOCX）",
+      svgScaleNote: "（PNG の解像度倍率は上の共通設定にあります。EPUB と DOCX の変換も同じ数値でラスタ化するためです）",
       tabJoin: "章別HTMLの結合",
       tabSplit: "単一HTMLの分解",
       tabFigplace: "図配置",
+      tabEpubView: "EPUB プレビュー",
       splitTitle: "単一HTMLを章別HTMLへ分解する",
       splitBtn: "単一HTMLを選択",
       splitSaveBtn: "book フォルダへ書き出す…",
@@ -732,7 +892,7 @@
       noFileChosen: "ファイル未選択",
       fileHint: "HTML ファイルを選択してください。",
       previewSummary: "プレビュー（読み込んだ HTML の実レンダリング）",
-      s2Title: "2. 設定",
+      s2Title: "共通設定",
       legendSvg: "SVG 画像の Export 形式",
       optSvg: "SVG（ベクター原本）",
       optPng: "PNG（ラスタ）",
@@ -754,10 +914,12 @@
       svgFallbackFail: "SVG 埋め込みに必須の PNG フォールバックを生成できませんでした（{msg}）。この図は埋め込まれていません。",
       imgFmtSummary: "画像の埋め込み [{mode}]: {detail}",
       h1PageBreakLabel: "h1 の前で改ページ（KDP 章区切り）",
+      h2PageBreakLabel: "h2 の前で改ページ",
+      pageBreakNote: "（h1 が「第1部」、h2 が「第1章」という作りの本では、h2 も入れないと章がページの途中から始まります。両方入れると、部の扉が1ページを占め、章は次のページの頭から始まります）",
       tocEnableLabel: "目次を挿入する（ページ番号なしの内部リンク・書名 h1 の直後）",
       tocTitleLabel: "目次の見出し",
       tocLevelsLabel: "含める見出しレベル",
-      tocNote: "（ページ番号なしのクリック可能な目次。Kindle/KDP でそのまま正しく表示されます。見出しは Heading スタイルのままなので、Kindle の「移動」ナビも作られます）",
+      tocNote: "（どちらの出力も同じ見出しから目次を作るので、文言とレベルはここで一度だけ決めます。できるのはページ番号なしのクリック可能な目次で、Kindle/KDP でそのまま正しく表示されます。見出しは Heading スタイルのままなので、Kindle の「移動」ナビも作られます。目次を入れるかどうか・どこへ入れるかは、各タブ側です）",
       tocAdded: "DOCX の目次を{where}挿入しました（レベル {range}）。ページ番号なし、各項目は見出しへのリンクです。",
       tocAtTop: "文書の先頭に",
       tocPosLabel: "目次を置く位置",
@@ -792,7 +954,7 @@
       epubSplitPicked: "章分割: h{lv}（{n}章）。",
       epubSplitOff: "章分割なし — 本文全体が1つの XHTML です（{kb} KB）。",
       epubTextColorLabel: "文字色を反映する（本文・見出し）",
-      epubTextColorNote: "（単一HTML の <style> は EPUB へ持ち込まないため、既定では全ての文字が端末の既定色になります。色は「親から変わったところ」だけインラインで書きます——残りは継承で足ります。どの色を残すかは上の DOCX 設定「本文を黒にして読みやすく（白背景）」が決め、DOCX 変換と同じ規則です: 白い紙の上でコントラスト比 4.5 未満の色や灰色は、色の指定ではなく画面用テーマだからです。印刷モードを ON にしてから変換すると、紙向けに指定した色の方を読みます）",
+      epubTextColorNote: "（単一HTML の <style> は EPUB へ持ち込まないため、既定では全ての文字が端末の既定色になります。色は「親から変わったところ」だけインラインで書きます——残りは継承で足ります。どの色を残すかは共通設定の「本文を黒にして読みやすく（白背景）」が決め、DOCX 変換と同じ規則です: 白い紙の上でコントラスト比 4.5 未満の色や灰色は、色の指定ではなく画面用テーマだからです。印刷モードを ON にしてから変換すると、紙向けに指定した色の方を読みます）",
       epubTextColorApplied: "文字色: {n} 要素に反映しました。",
       epubTextColorNone: "文字色: 既定色と違う指定がありませんでした。色は書いていません。",
       epubCalloutLabel: "囲み（コラム / コールアウト）を枠付きで出す",
@@ -814,7 +976,7 @@
       msTocOff: "単一HTML の目次: 生成しません（結合の設定）。",
       msTocPosLost: "目次の位置「{at}」が構成定義にありません。何も書き出していません。",
       epubTocDepthLabel: "目次に入れる見出しレベル",
-      epubTocDepthDocx: "上の DOCX 目次の設定に合わせる",
+      epubTocDepthDocx: "共通設定の目次レベルに合わせる",
       epubTocDepth1: "h1 のみ",
       epubTocDepth2: "h2 まで",
       epubTocDepth3: "h3 まで",
@@ -841,7 +1003,29 @@
       epubFatal: "EPUB 変換で致命的エラー: {msg}",
       epubSummary: "EPUB: {chapters}章 / 画像{images}点 / 目次{toc}項目 / 最小長辺={px}px",
       epubImgFail: "画像を EPUB に埋め込めませんでした（{msg}）。代替テキストを入れました。",
-      legendTrim: "判型・版面（DOCX のページ設定）",
+      epubH1BreakLabel: "h1 の前で改ページ",
+      epubH2BreakLabel: "h2 の前で改ページ",
+      epubBreakNote: "（EPUB のスタイルシートへ page-break-before として書き込みます。章分割に使った見出しは、その見出しから別ファイルが始まるので、ここで入れなくてもページの頭から始まります。効くのはそれより下のレベル——h1 が部で h2 が章、といった場合の h2 です。どこで切れたかは EPUB プレビュータブで確かめられます）",
+      epubBreakUsed: "EPUB の改ページ: {levels} の前。",
+      epvTitle: "EPUB を読む",
+      epvOpenBtn: "EPUB を選ぶ",
+      epvLastBtn: "直前に作った EPUB を開く",
+      epvNone: "EPUB を開いていません",
+      epvNote: "（ブラウザの中だけで開きます。サーバへは送りません。本文は spine の順に読み、左の目次は EPUB 自身の nav から作ります。ここで確かめられるのは中身と構造——章がどこで切れたか、目次のリンクが飛ぶか、図が入っているか、改ページがどこに落ちたか（破線で示します）——までです。行分割やフォントは Kindle ではなくブラウザのものなので、入稿前には Kindle Previewer で見てください）",
+      epvPrev: "‹ 前へ",
+      epvNext: "次へ ›",
+      epvFontLabel: "文字サイズ",
+      epvOpened: "{name} を開きました — {n} ファイル / 目次 {toc} 項目。",
+      epvFail: "EPUB を開けませんでした: {msg}",
+      epvMissing: "{path} が EPUB の中にありません。",
+      epvNoNav: "この EPUB には目次（nav）がありません。左の一覧は spine の並びです。",
+      epvSpineEmpty: "EPUB の spine が空です。表示するものがありません。",
+      epvSectionFail: "{path} を表示できませんでした: {msg}",
+      epvExtLink: "外部リンク（{href}）です。別タブで開きました。",
+      epvLinkLost: "リンク先（{href}）はこの本の中にありません。移動しませんでした。",
+      epvPageBreak: "改ページ",
+      epvBuilt: "EPUB プレビュータブで、そのまま読んで確かめられます。",
+      legendTrim: "判型・版面",
       unitLabel: "単位",
       baseFontLabel: "基本フォント（本文・見出し）",
       trimSizeLabel: "判型（トリムサイズ）",
@@ -854,7 +1038,7 @@
       marginsLabel: "マージン（上 / 下 / 内 / 外）",
       gutterLabel: "綴じしろ（gutter）",
       gutterNote: "（ページ数が多いほど内側を広めに。〜150p は内0.75で安全）",
-      s3Title: "3. 実行",
+      s3Title: "実行",
       btnDocx: "DOCX に変換してダウンロード",
       btnSvg: "SVG 画像を Export（zip）",
       clientNote: "※ 変換は全てブラウザ内で完結します（ファイルはサーバに送信されません）。",
@@ -901,7 +1085,7 @@
       appTitle: "html2docx",
       appSubtitle: "将任意 HTML 转换为 KDP 适用的 DOCX ／ 将 SVG 图像导出为 PNG 和 SVG。单文件，完全在浏览器中运行。",
       language: "语言",
-      s1Title: "1. 输入 HTML",
+      s1Title: "输入 HTML",
       joinBtn: "合并章节 HTML（book 文件夹）",
       joinNone: "未选择文件夹",
       joinNote: "（选择「拆分」标签页生成的 book/ 文件夹。按 manifest.json 的顺序将章节还原为单一 HTML。在点击「另存为」之前不会写入任何文件（可自行命名，也可覆盖原始单一 HTML）。结果同时交给转换标签页，无需重新载入即可通读与转换。此按钮即为常规入口；tool/htmlbook/htmlbook.py 是同一流程的 CLI，作为独立校验器保留）",
@@ -917,10 +1101,23 @@
       joinNoFrame: "所选文件夹中没有 _frame.html",
       joinNoManifest: "所选文件夹中没有 manifest.json",
       joinNoMark: "_frame.html 中没有 {mark}",
-      tabConvert: "HTML → EPUB / DOCX 转换",
+      tabEpub: "HTML → EPUB",
+      tabDocx: "HTML → DOCX",
+      tabSvg: "导出图片",
+      sEpubTitle: "EPUB 设置",
+      sDocxTitle: "DOCX 设置",
+      sTrimTitle: "开本与页面",
+      sSvgTitle: "图片导出设置",
+      commonNote: "（这里集中放置两种以上输出都会读取的设置。若在各标签页重复放置，就无法判断到底哪一处生效。标签页内的设置只影响该输出）",
+      legendCommonRead: "页面读取（EPUB / DOCX / 图片）",
+      legendCommonColor: "颜色（EPUB / DOCX / 图片）",
+      legendCommonFig: "图片分辨率（EPUB / DOCX / 图片）",
+      legendCommonToc: "目录（EPUB / DOCX）",
+      svgScaleNote: "（PNG 分辨率倍数位于上方的通用设置中，因为 EPUB 与 DOCX 转换使用同一数值进行栅格化）",
       tabJoin: "合并章节 HTML",
       tabSplit: "拆分单一 HTML",
       tabFigplace: "图片布局",
+      tabEpubView: "EPUB 预览",
       splitTitle: "将单一 HTML 拆分为章节文件",
       splitBtn: "选择单一 HTML",
       splitSaveBtn: "写入 book 文件夹…",
@@ -983,7 +1180,7 @@
       noFileChosen: "未选择文件",
       fileHint: "请选择一个 HTML 文件。",
       previewSummary: "预览（已加载 HTML 的实时渲染）",
-      s2Title: "2. 设置",
+      s2Title: "通用设置",
       legendSvg: "SVG 图像导出格式",
       optSvg: "SVG（矢量原稿）",
       optPng: "PNG（位图）",
@@ -1005,10 +1202,12 @@
       svgFallbackFail: "无法生成嵌入 SVG 所必需的 PNG 回退（{msg}），该图未被嵌入。",
       imgFmtSummary: "图像嵌入 [{mode}]: {detail}",
       h1PageBreakLabel: "在 h1 前分页（KDP 章节分隔）",
+      h2PageBreakLabel: "在 h2 前分页",
+      pageBreakNote: "（若 h1 是「第一部」、h2 是「第一章」，只勾选 h1 会让章节从页面中途开始。两个都勾选时，部的扉页独占一页，章节从下一页开头开始）",
       tocEnableLabel: "插入目录（无页码的内部链接，位于书名 h1 之后）",
       tocTitleLabel: "目录标题",
       tocLevelsLabel: "包含的标题级别",
-      tocNote: "（无页码的可点击目录，可在 Kindle/KDP 中正确显示。标题保留其样式，因此 Kindle 也会生成「转到」导航）",
+      tocNote: "（两种输出都依据相同的标题生成目录，因此文字与层级范围在此统一设定。生成的是无页码的可点击目录，可在 Kindle/KDP 中正确显示。标题保留其样式，因此 Kindle 也会生成「转到」导航。是否加入目录、放在何处，则由各标签页决定）",
       tocAdded: "已在 DOCX 的{where}插入目录（级别 {range}）。无页码，每项均链接到对应标题。",
       tocAtTop: "文档开头",
       tocPosLabel: "目录位置",
@@ -1043,7 +1242,7 @@
       epubSplitPicked: "章节分割: h{lv}（{n} 章）。",
       epubSplitOff: "未分割 — 全书为一个 XHTML 文件（{kb} KB）。",
       epubTextColorLabel: "保留文字颜色（正文与标题）",
-      epubTextColorNote: "（单一 HTML 的 <style> 不会带入 EPUB，因此默认所有文字都会显示为阅读器的默认颜色。颜色只在「与父元素不同」处以内联方式写入，其余由继承覆盖。保留哪些颜色由上方 DOCX 设置「正文用黑色以保证对比度（白底）」决定，与 DOCX 转换同规则: 在白纸上对比度低于 4.5 的颜色或灰色，并非配色选择而是屏幕主题。请先开启打印模式，这样读取到的才是为纸面指定的颜色。）",
+      epubTextColorNote: "（单一 HTML 的 <style> 不会带入 EPUB，因此默认所有文字都会显示为阅读器的默认颜色。颜色只在「与父元素不同」处以内联方式写入，其余由继承覆盖。保留哪些颜色由上方通用设置「正文用黑色以保证对比度（白底）」决定，与 DOCX 转换同规则: 在白纸上对比度低于 4.5 的颜色或灰色，并非配色选择而是屏幕主题。请先开启打印模式，这样读取到的才是为纸面指定的颜色。）",
       epubTextColorApplied: "文字颜色：已在 {n} 个元素上保留。",
       epubTextColorNone: "文字颜色：没有与默认色不同的指定，未写入颜色。",
       epubCalloutLabel: "将专栏 / 提示框输出为带边框的区块",
@@ -1065,7 +1264,7 @@
       msTocOff: "单一 HTML 的目录：不生成（结合设置）。",
       msTocPosLost: "目录位置「{at}」不在结构定义中，未写出任何内容。",
       epubTocDepthLabel: "目录包含的标题级别",
-      epubTocDepthDocx: "沿用上面 DOCX 目录的设置",
+      epubTocDepthDocx: "沿用通用设置中的目录层级",
       epubTocDepth1: "仅 h1",
       epubTocDepth2: "至 h2",
       epubTocDepth3: "至 h3",
@@ -1092,7 +1291,29 @@
       epubFatal: "EPUB 转换发生致命错误: {msg}",
       epubSummary: "EPUB: {chapters} 章 / 图像 {images} 个 / 目录 {toc} 项 / 最小长边={px}px",
       epubImgFail: "无法将图像嵌入 EPUB（{msg}），已插入占位文本。",
-      legendTrim: "开本 / 版面（DOCX 页面设置）",
+      epubH1BreakLabel: "在 h1 前分页",
+      epubH2BreakLabel: "在 h2 前分页",
+      epubBreakNote: "（会以 page-break-before 写入 EPUB 样式表。用于切分章节的那一级标题本身就位于新文件的开头，因此不勾选也会另起一页；真正需要的是它下面的层级——例如 h1 为部、h2 为章时的 h2。分页落在何处可在 EPUB 预览标签中确认）",
+      epubBreakUsed: "EPUB 分页：在 {levels} 之前。",
+      epvTitle: "阅读 EPUB",
+      epvOpenBtn: "选择 EPUB 文件",
+      epvLastBtn: "打开刚生成的 EPUB",
+      epvNone: "尚未打开 EPUB",
+      epvNote: "（仅在浏览器内打开，不会上传。正文按 spine 顺序读取，左侧目录取自 EPUB 自带的 nav。这里能确认的是内容与结构——章节在哪里切分、目录链接是否能跳转、插图是否保留、分页落在何处（以虚线标出）。断行与字体是浏览器的而非 Kindle 的，上传前请用 Kindle Previewer 复核）",
+      epvPrev: "‹ 上一节",
+      epvNext: "下一节 ›",
+      epvFontLabel: "文字大小",
+      epvOpened: "已打开 {name} —— {n} 个文件 / 目录 {toc} 项。",
+      epvFail: "无法打开 EPUB：{msg}",
+      epvMissing: "EPUB 中不存在 {path}。",
+      epvNoNav: "该 EPUB 没有导航文档（nav），左侧列表按 spine 顺序显示。",
+      epvSpineEmpty: "EPUB 的 spine 为空，没有可显示的内容。",
+      epvSectionFail: "无法显示 {path}：{msg}",
+      epvExtLink: "外部链接（{href}），已在新标签页打开。",
+      epvLinkLost: "链接目标（{href}）不在本书内，未进行跳转。",
+      epvPageBreak: "分页",
+      epvBuilt: "可直接在 EPUB 预览标签中阅读确认。",
+      legendTrim: "开本 / 版面",
       unitLabel: "单位",
       baseFontLabel: "基础字体（正文・标题）",
       trimSizeLabel: "开本（裁切尺寸）",
@@ -1105,7 +1326,7 @@
       marginsLabel: "页边距（上 / 下 / 内 / 外）",
       gutterLabel: "装订线（gutter）",
       gutterNote: "（页数越多内侧越宽。≤150 页时内侧 0.75 较安全）",
-      s3Title: "3. 执行",
+      s3Title: "执行",
       btnDocx: "转换并下载 DOCX",
       btnSvg: "导出 SVG 图像（zip）",
       clientNote: "※ 所有转换都在浏览器内完成（文件不会发送到服务器）。",
@@ -1205,8 +1426,25 @@
     imgModeRow: document.getElementById("imgModeRow"),
     imgModeNote: document.getElementById("imgModeNote"),
     minLongPx: document.getElementById("minLongPx"),
-    minLongRow: document.getElementById("minLongRow"),
+    cardInput: document.getElementById("cardInput"),
+    cardCommon: document.getElementById("cardCommon"),
     h1PageBreak: document.getElementById("h1PageBreak"),
+    h2PageBreak: document.getElementById("h2PageBreak"),
+    epubH1PageBreak: document.getElementById("epubH1PageBreak"),
+    epubH2PageBreak: document.getElementById("epubH2PageBreak"),
+    epvFile: document.getElementById("epvFile"),
+    epvOpenBtn: document.getElementById("epvOpenBtn"),
+    epvLastBtn: document.getElementById("epvLastBtn"),
+    epvName: document.getElementById("epvName"),
+    epvBar: document.getElementById("epvBar"),
+    epvShell: document.getElementById("epvShell"),
+    epvToc: document.getElementById("epvToc"),
+    epvFrame: document.getElementById("epvFrame"),
+    epvPrev: document.getElementById("epvPrev"),
+    epvNext: document.getElementById("epvNext"),
+    epvPos: document.getElementById("epvPos"),
+    epvFont: document.getElementById("epvFont"),
+    epvFontVal: document.getElementById("epvFontVal"),
     tocEnable: document.getElementById("tocEnable"),
     msTocEnable: document.getElementById("msTocEnable"),
     msTocPos: document.getElementById("msTocPos"),
@@ -1214,7 +1452,6 @@
     tocPos: document.getElementById("tocPos"),
     tocPosRow: document.getElementById("tocPosRow"),
     tocPosNoteRow: document.getElementById("tocPosNoteRow"),
-    tocOptRow: document.getElementById("tocOptRow"),
     tocTitle: document.getElementById("tocTitle"),
     tocFrom: document.getElementById("tocFrom"),
     tocTo: document.getElementById("tocTo"),
@@ -1280,7 +1517,13 @@
       }
     }
     document.querySelectorAll("main > .card").forEach(c => { c.style.display = key === "figplace" ? "none" : ""; });
+    // 入力と共通設定は3つの変換タブでだけ意味を持つ。結合・分割・プレビューでは出さない。
+    // （この2枚も main > .card なので、上の一括表示のあとで畳む）
+    const conv = CONV_TABS.has(key);
+    els.cardInput.style.display = conv ? "" : "none";
+    els.cardCommon.style.display = conv ? "" : "none";
   }
+  const CONV_TABS = new Set(["epub", "docx", "svg"]);
   document.querySelectorAll(".tab").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
   try {
     const savedTab = localStorage.getItem("h2dTab");
@@ -2769,6 +3012,9 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
     const blob = await zip.generateAsync({ type: "blob", mimeType: "application/epub+zip" });
     const fname = (title.replace(/[\\/:*?"<>|]/g, "_").slice(0, 60) || "book") + ".epub";
     downloadBlob(blob, fname);
+    // 作った直後に読めるようにしておく。書き出したファイルを選び直させる手間は、
+    // 「改ページを入れて確かめる」を何度も回すときにそのまま摩擦になる。
+    setLastEpub(blob, fname);
     if (ADJ.text) log(t("contrastAdjusted", { n: ADJ.text }));
     if (ADJ.fig) log(t("figAdjusted", { n: ADJ.fig }));
     log(t("epubSummary", {
@@ -2833,7 +3079,7 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
     }
     return {
       from: Math.round(numOr(els.tocFrom.value, 1)),
-      to: Math.round(numOr(els.tocTo.value, 3)),
+      to: Math.round(numOr(els.tocTo.value, 2)),
     };
   }
 
@@ -3070,7 +3316,20 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
       "ol.book-toc li.book-toc-l4 { margin-left: 3em; font-size: .9em; }",
       "ol.book-toc li.book-toc-l5 { margin-left: 4em; font-size: .9em; }",
       "ol.book-toc li.book-toc-l6 { margin-left: 5em; font-size: .9em; }",
-    ].concat(extra || []).join("\n") + "\n";
+    ].concat(epubBreakCss()).concat(extra || []).join("\n") + "\n";
+  }
+
+  // 見出しの前で改ページ。章分割に使ったレベルの見出しは既に別ファイルの先頭に居るので、
+  // ここでの指定は効いても効かなくても同じ（ページ先頭の改ページ指定は無視される）。
+  // 効き目があるのはその下のレベル——h1 が部で h2 が章、という本の h2——のほう。
+  // page-break-before は旧仕様、break-before が現行。読み手が古い端末でも当たるよう両方書く。
+  function epubBreakCss() {
+    const lv = [];
+    if (els.epubH1PageBreak.checked) lv.push("h1");
+    if (els.epubH2PageBreak.checked) lv.push("h2");
+    if (!lv.length) return [];
+    log(t("epubBreakUsed", { levels: lv.join(" / ") }));
+    return [lv.join(", ") + " { page-break-before: always; break-before: page; }"];
   }
 
   // ---- 文字色 ----
@@ -3501,7 +3760,9 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
       heading: D.HeadingLevel["HEADING_" + lv],
       alignment: mapAlign(gcs(el).textAlign),
     };
-    if (lv === 1 && els.h1PageBreak.checked) opts.pageBreakBefore = true;
+    // h1 だけでは足りない本がある。「第1部」が h1 で「第1章」が h2 の構成では、
+    // h2 で切らないと章がページの途中から始まる。レベルごとに独立して選べるようにする。
+    if ((lv === 1 && els.h1PageBreak.checked) || (lv === 2 && els.h2PageBreak.checked)) opts.pageBreakBefore = true;
     applyCalloutShading(opts, effectiveBg(el));
     const p = new D.Paragraph(opts);
     if (lv === 1) H1_PARAS.add(p);
@@ -3649,10 +3910,11 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
   els.calloutBg.addEventListener("change", syncCalloutThreshRow);
   syncCalloutThreshRow();
 
-  // 目次 ON のときだけ目次の詳細設定を表示
+  // DOCX に目次を入れるときだけ「どこへ入れるか」を表示する。
+  // 見出し文言とレベルは EPUB も読むので共通設定にあり、ここでは畳まない
+  // （畳むと、DOCX の目次を切った瞬間に EPUB の目次設定まで消える）。
   function syncTocOptRow() {
     const on = els.tocEnable.checked;
-    els.tocOptRow.style.display = on ? "flex" : "none";
     els.tocPosRow.style.display = on ? "flex" : "none";
     els.tocPosNoteRow.style.display = on ? "" : "none";
   }
@@ -3675,11 +3937,11 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
   els.epubCallout.addEventListener("change", syncEpubCalloutRow);
   syncEpubCalloutRow();
 
-  // 画像を埋め込まないときは形式の選択肢を出さない
+  // 画像を埋め込まないときは形式の選択肢を出さない。
+  // 図の最小長辺は EPUB も読むので共通設定にあり、ここでは畳まない。
   function syncImgModeRow() {
     const on = els.embedImages.checked;
     els.imgModeRow.style.display = on ? "flex" : "none";
-    els.minLongRow.style.display = on ? "flex" : "none";
     els.imgModeNote.style.display = on ? "" : "none";
   }
   els.embedImages.addEventListener("change", syncImgModeRow);
@@ -3863,6 +4125,401 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
     if (isNaN(n)) return def;
     return Math.min(hi, Math.max(lo, n));
   }
+  // ================= EPUB プレビューア =================
+  // 端末を用意せずに、作った EPUB をその場で読むための画面。zip を解いて OPF の spine 順に
+  // XHTML を描き、目次は EPUB 自身の nav（無ければ ncx）から作る。
+  // ここで分かるのは中身と構造——章の切れ目・目次の飛び先・図の有無・改ページの位置——まで。
+  // 行分割やフォントはブラウザのものなので、組版そのものは Kindle Previewer で見る。
+  const EPV = {
+    zip: null,
+    spine: [],        // EPUB 内のパスの配列（読み順）
+    nav: [],          // [{ path, hash, level, text }]
+    idx: -1,
+    urls: new Map(),  // zip 内パス → blob URL（本を開き直すとき全部返す）
+    css: new Map(),   // zip 内パス → 書き換え済み CSS テキスト
+  };
+  let LAST_EPUB = null; // 変換タブが直前に作った EPUB
+
+  function setLastEpub(blob, name) {
+    LAST_EPUB = { blob: blob, name: name };
+    els.epvLastBtn.disabled = false;
+    log(t("epvBuilt"));
+  }
+
+  // EPUB 内のパス解決。href は %エンコードされていることがある（日本語ファイル名など）が、
+  // zip のエントリ名は生の文字列なので、必ず戻してから引く。
+  // 外部 URL（http: など）は EPUB の中に無いので null を返し、呼び手に触らせない。
+  function epvResolve(baseFile, rel) {
+    let r = String(rel == null ? "" : rel).split("#")[0];
+    if (!r) return "";
+    if (/^[a-z][a-z0-9+.-]*:/i.test(r)) return null;
+    try { r = decodeURIComponent(r); } catch (e) { /* 壊れた % は生のまま扱う */ }
+    const base = r.charAt(0) === "/" ? "" : String(baseFile || "").replace(/[^/]*$/, "");
+    const out = [];
+    for (const p of (base + r.replace(/^\/+/, "")).split("/")) {
+      if (!p || p === ".") continue;
+      if (p === "..") out.pop(); else out.push(p);
+    }
+    return out.join("/");
+  }
+
+  function epvHash(href) {
+    const i = String(href == null ? "" : href).indexOf("#");
+    if (i < 0) return "";
+    let h = href.slice(i + 1);
+    try { h = decodeURIComponent(h); } catch (e) { /* 生のまま */ }
+    return h;
+  }
+
+  const EPV_MIME = {
+    png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif",
+    svg: "image/svg+xml", webp: "image/webp", bmp: "image/bmp",
+    otf: "font/otf", ttf: "font/ttf", woff: "font/woff", woff2: "font/woff2",
+  };
+
+  // zip の中身を blob URL にする。必要になったものだけ作り、開き直すときにまとめて返す。
+  async function epvUrl(path) {
+    if (!path) return null;
+    if (EPV.urls.has(path)) return EPV.urls.get(path);
+    const f = EPV.zip.file(path);
+    if (!f) { log(t("epvMissing", { path: path }), "warn"); EPV.urls.set(path, null); return null; }
+    const ext = (path.split(".").pop() || "").toLowerCase();
+    const blob = new Blob([await f.async("uint8array")], { type: EPV_MIME[ext] || "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+    EPV.urls.set(path, url);
+    return url;
+  }
+
+  async function epvText(path) {
+    const f = EPV.zip.file(path);
+    if (!f) throw new Error(t("epvMissing", { path: path }));
+    return f.async("string");
+  }
+
+  // DOMParser は失敗しても例外を投げず parsererror 要素を返す。黙って進めない。
+  function epvParse(text, mime) {
+    const doc = new DOMParser().parseFromString(text, mime || "application/xml");
+    return doc.getElementsByTagName("parsererror").length ? null : doc;
+  }
+
+  function epvReset() {
+    for (const u of EPV.urls.values()) if (u) URL.revokeObjectURL(u);
+    EPV.zip = null; EPV.spine = []; EPV.nav = []; EPV.idx = -1;
+    EPV.urls = new Map(); EPV.css = new Map();
+    els.epvToc.innerHTML = "";
+    els.epvFrame.removeAttribute("srcdoc");
+    els.epvShell.style.display = "none";
+    els.epvBar.style.display = "none";
+    els.epvPos.textContent = "";
+  }
+
+  async function epvOpenBook(blob) {
+    epvReset();
+    EPV.zip = await JSZip.loadAsync(blob);
+
+    // EPUB の入口は container.xml ただ1つ。ここから OPF を引く。
+    const cont = epvParse(await epvText("META-INF/container.xml"));
+    const rootEl = cont && cont.getElementsByTagName("rootfile")[0];
+    const opfPath = rootEl && epvResolve("", rootEl.getAttribute("full-path") || "");
+    if (!opfPath) throw new Error("META-INF/container.xml");
+    const opf = epvParse(await epvText(opfPath));
+    if (!opf) throw new Error(opfPath);
+
+    const items = new Map(); // id → { path, props }
+    for (const it of [...opf.getElementsByTagName("item")]) {
+      const id = it.getAttribute("id");
+      const href = it.getAttribute("href");
+      if (!id || !href) continue;
+      items.set(id, { path: epvResolve(opfPath, href), props: it.getAttribute("properties") || "" });
+    }
+    for (const ir of [...opf.getElementsByTagName("itemref")]) {
+      const it = items.get(ir.getAttribute("idref"));
+      if (it && it.path) EPV.spine.push(it.path);
+    }
+    if (!EPV.spine.length) throw new Error(t("epvSpineEmpty"));
+
+    // 目次は EPUB3 の nav が本命。無ければ EPUB2 の ncx、それも無ければ spine の並び。
+    let navPath = null;
+    for (const it of items.values()) if (/(^|\s)nav(\s|$)/.test(it.props)) navPath = it.path;
+    if (navPath) EPV.nav = await epvNavXhtml(navPath);
+    if (!EPV.nav.length) {
+      const ncx = [...items.values()].find(i => /\.ncx$/i.test(i.path || ""));
+      if (ncx) EPV.nav = await epvNavNcx(ncx.path);
+    }
+    if (!EPV.nav.length) {
+      log(t("epvNoNav"), "warn");
+      EPV.nav = EPV.spine.map(p => ({ path: p, hash: "", level: 1, text: p.split("/").pop() }));
+    }
+  }
+
+  async function epvNavXhtml(path) {
+    const raw = await epvText(path);
+    const doc = epvParse(raw, "application/xhtml+xml") || epvParse(raw, "text/html");
+    if (!doc) { log(t("epvSectionFail", { path: path, msg: "XHTML" }), "warn"); return []; }
+    const navs = [...doc.getElementsByTagName("nav")];
+    const OPS = "http://www.idpf.org/2007/ops";
+    const isToc = n => ((n.getAttributeNS && n.getAttributeNS(OPS, "type")) || n.getAttribute("epub:type") || "")
+      .split(/\s+/).indexOf("toc") >= 0;
+    const toc = navs.find(isToc) || navs[0];
+    if (!toc) return [];
+    const out = [];
+    const kids = (el, name) => [...el.children].filter(c => c.localName === name);
+    const walk = (ol, level) => {
+      for (const li of kids(ol, "li")) {
+        const a = kids(li, "a")[0];
+        if (a) {
+          const href = a.getAttribute("href") || "";
+          const p = epvResolve(path, href);
+          if (p) out.push({ path: p, hash: epvHash(href), level: level, text: (a.textContent || "").replace(/\s+/g, " ").trim() });
+        }
+        for (const sub of kids(li, "ol")) walk(sub, level + 1);
+      }
+    };
+    for (const ol of kids(toc, "ol")) walk(ol, 1);
+    return out;
+  }
+
+  async function epvNavNcx(path) {
+    const doc = epvParse(await epvText(path));
+    if (!doc) { log(t("epvSectionFail", { path: path, msg: "NCX" }), "warn"); return []; }
+    const out = [];
+    const walk = (node, level) => {
+      for (const np of [...node.children].filter(c => c.localName === "navPoint")) {
+        const lbl = np.getElementsByTagName("text")[0];
+        const c = np.getElementsByTagName("content")[0];
+        const href = (c && c.getAttribute("src")) || "";
+        const p = epvResolve(path, href);
+        if (p) out.push({ path: p, hash: epvHash(href), level: level, text: ((lbl && lbl.textContent) || "").replace(/\s+/g, " ").trim() });
+        walk(np, level + 1);
+      }
+    };
+    const map = doc.getElementsByTagName("navMap")[0];
+    if (map) walk(map, 1);
+    return out;
+  }
+
+  function epvRenderToc() {
+    els.epvToc.innerHTML = "";
+    for (const n of EPV.nav) {
+      const a = document.createElement("a");
+      a.href = "#";
+      a.className = "lv" + Math.min(6, Math.max(1, n.level));
+      a.textContent = n.text || n.path.split("/").pop();
+      a.title = a.textContent;
+      const navIdx = EPV.nav.indexOf(n);
+      a.addEventListener("click", (e) => {
+        e.preventDefault();
+        const at = EPV.spine.indexOf(n.path);
+        if (at < 0) { log(t("epvLinkLost", { href: n.path }), "warn"); return; }
+        epvShow(at, n.hash, navIdx);
+      });
+      els.epvToc.appendChild(a);
+    }
+  }
+
+  // いま読んでいる場所に当たる目次の項目を目立たせる。1つのファイルに節が何本も入る本では
+  // 「そのファイルを指す項目」が複数あるので、目次から来たときはクリックされた項目そのものを
+  // 使う（先頭に寄せると、節を選んだのに章が光る）。それ以外は先頭の一致を現在地とみなす。
+  function epvMarkToc(navIdx) {
+    const cur = EPV.spine[EPV.idx];
+    const hit = (navIdx >= 0 && EPV.nav[navIdx] && EPV.nav[navIdx].path === cur)
+      ? navIdx : EPV.nav.findIndex(n => n.path === cur);
+    [...els.epvToc.children].forEach((a, i) => a.classList.toggle("active", i === hit));
+  }
+
+  async function epvShow(i, hash, navIdx) {
+    if (i < 0 || i >= EPV.spine.length) return;
+    const path = EPV.spine[i];
+    let html;
+    try { html = await epvSectionHtml(path); }
+    catch (err) {
+      log(t("epvSectionFail", { path: path, msg: err && err.message ? err.message : String(err) }), "err");
+      return;
+    }
+    EPV.idx = i;
+    const f = els.epvFrame;
+    f.onload = () => { f.onload = null; epvWireFrame(hash); };
+    f.srcdoc = html;
+    els.epvPos.textContent = (i + 1) + " / " + EPV.spine.length + "   " + path.split("/").pop();
+    els.epvPrev.disabled = i === 0;
+    els.epvNext.disabled = i === EPV.spine.length - 1;
+    epvMarkToc(navIdx == null ? -1 : navIdx);
+  }
+
+  async function epvSectionHtml(path) {
+    const raw = await epvText(path);
+    const doc = epvParse(raw, "application/xhtml+xml") || epvParse(raw, "text/html");
+    if (!doc) throw new Error("XHTML");
+    const body = doc.getElementsByTagName("body")[0] || doc.documentElement;
+
+    // 本の CSS は <link> のままだと、このツールの置き場所から取りにいって必ず外れる。
+    // 中身を読んで <style> として流し込み、url() は blob へ差し替える。
+    const sheets = [];
+    for (const lk of [...doc.getElementsByTagName("link")]) {
+      if (/stylesheet/i.test(lk.getAttribute("rel") || "")) {
+        const p = epvResolve(path, lk.getAttribute("href") || "");
+        if (p) sheets.push(await epvCssText(p));
+      }
+      lk.remove();
+    }
+    for (const st of [...doc.getElementsByTagName("style")]) { sheets.push(st.textContent || ""); st.remove(); }
+
+    await epvRewriteRefs(body, path);
+    // CSS の中の </style> でページを割らせない（本文側に紛れ込むと以降が全部素通しになる）。
+    const book = sheets.join("\n").replace(/<\/(style|script)/gi, "<\\/$1");
+    return '<!doctype html><html><head><meta charset="utf-8">'
+      + "<style>" + epvShellCss() + "</style>"
+      + "<style>" + book + "</style>"
+      + "<style>" + epvFrameCss() + "</style>"
+      + "</head><body>" + body.innerHTML + "</body></html>";
+  }
+
+  // 画像・フォントの参照を blob URL へ。外部 URL（http:）はそのまま残す。
+  async function epvRewriteRefs(root, path) {
+    for (const el of [...root.querySelectorAll("script")]) el.remove();
+    for (const im of [...root.querySelectorAll("img")]) {
+      const p = epvResolve(path, im.getAttribute("src") || "");
+      if (p === null) continue;
+      const u = await epvUrl(p);
+      if (u) im.setAttribute("src", u); else im.removeAttribute("src");
+    }
+    // SVG の <image> は xlink:href（旧）と href（新）の両方が使われる。
+    const XLINK = "http://www.w3.org/1999/xlink";
+    for (const im of [...root.querySelectorAll("image")]) {
+      const ref = (im.getAttributeNS && im.getAttributeNS(XLINK, "href")) || im.getAttribute("href") || "";
+      const p = epvResolve(path, ref);
+      if (p === null) continue;
+      const u = await epvUrl(p);
+      if (u) { im.setAttribute("href", u); try { im.setAttributeNS(XLINK, "xlink:href", u); } catch (e) { /* noop */ } }
+    }
+    // イベント属性は落とす。iframe は sandbox で JS を止めているが、印を二重にしておく。
+    for (const el of [...root.querySelectorAll("*")]) {
+      for (const at of [...el.attributes]) if (/^on/i.test(at.name)) el.removeAttribute(at.name);
+    }
+  }
+
+  async function epvCssText(path) {
+    if (EPV.css.has(path)) return EPV.css.get(path);
+    let text = "";
+    try { text = await epvText(path); }
+    catch (err) { log(t("epvSectionFail", { path: path, msg: err.message }), "warn"); }
+    // url() の相対パスも zip の中にしかない。blob へ差し替える。
+    for (const m of [...text.matchAll(/url\(\s*(['"]?)([^'")]+)\1\s*\)/g)]) {
+      const p = epvResolve(path, m[2]);
+      if (!p) continue;
+      const u = await epvUrl(p);
+      if (u) text = text.split(m[0]).join("url(" + u + ")");
+    }
+    EPV.css.set(path, text);
+    return text;
+  }
+
+  // 本文の見た目の既定。本の CSS より前に置くので、本が書いている指定は本の側が勝つ。
+  // ここに置いてよいのは「本が何も言わなければこう」という話だけ。
+  function epvShellCss() {
+    return [
+      "body { color: #111; background: #fff;",
+      "  font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif; line-height: 1.85; }",
+      "img { max-width: 100%; height: auto; }",
+    ].join("\n");
+  }
+
+  // 読む窓そのものの寸法と改ページの印。本の CSS より後ろに置き、!important で必ず勝たせる。
+  // 余白をここへ置くのは、本の CSS が先に `html, body { margin: 0; padding: 0 }` を宣言している
+  // ため（このツールが出す EPUB がまさにそう書く）。前に置くと打ち消されて、
+  // 目次との境や紙面の左右に余白が無くなり、字が枠にぶつかったまま読むことになる。
+  // 文字サイズのつまみも同じ理由で html 側に !important で当てる。EPUB 側には一切入らない。
+  function epvFrameCss() {
+    const pct = clampInt(els.epvFont.value, 70, 200, 100);
+    return [
+      "html { font-size: " + pct + "% !important; background: #fff !important; }",
+      "body { max-width: 42em !important; margin: 0 auto !important; padding: 32px 44px 80px !important; }",
+      ".h2d-pb { border-top: 2px dashed #c0392b !important; margin-top: 2.4em !important;",
+      "  padding-top: 1.5em !important; position: relative; }",
+      '.h2d-pb::before { content: attr(data-h2d-pb); position: absolute; top: -.85em; left: 0;',
+      "  font-size: 11px; letter-spacing: .04em; color: #c0392b; background: #fff; padding: 0 6px;",
+      "  font-family: system-ui, sans-serif; font-weight: 600; }",
+    ].join("\n");
+  }
+
+  function epvWireFrame(hash) {
+    const doc = els.epvFrame.contentDocument;
+    if (!doc || !doc.body) return;
+    // 改ページが効いている要素へ印を付ける。算出値で見るので、本の CSS が
+    // page-break-before / break-before のどちらで書いていても拾える。
+    const label = t("epvPageBreak");
+    const view = doc.defaultView;
+    for (const el of doc.body.querySelectorAll("*")) {
+      let cs; try { cs = view.getComputedStyle(el); } catch (e) { continue; }
+      const pb = (cs.pageBreakBefore || "") + " " + (cs.breakBefore || "");
+      if (!/\b(always|page|left|right|recto|verso)\b/.test(pb)) continue;
+      el.setAttribute("data-h2d-pb", label);
+      el.classList.add("h2d-pb");
+    }
+    // リンクは全部こちらで解決する。srcdoc の相対 URL はこのツールの置き場所を指すので、
+    // 素通しすると必ず外れる。
+    doc.addEventListener("click", (e) => {
+      const a = e.target && e.target.closest ? e.target.closest("a[href]") : null;
+      if (!a) return;
+      e.preventDefault();
+      const href = a.getAttribute("href") || "";
+      if (href.charAt(0) === "#") { epvScrollTo(epvHash(href)); return; }
+      if (/^[a-z][a-z0-9+.-]*:/i.test(href)) {
+        window.open(href, "_blank", "noopener");
+        log(t("epvExtLink", { href: href }), "warn");
+        return;
+      }
+      const at = EPV.spine.indexOf(epvResolve(EPV.spine[EPV.idx], href));
+      if (at < 0) { log(t("epvLinkLost", { href: href }), "warn"); return; }
+      epvShow(at, epvHash(href));
+    });
+    if (hash) epvScrollTo(hash); else if (view) view.scrollTo(0, 0);
+  }
+
+  function epvScrollTo(id) {
+    const doc = els.epvFrame.contentDocument;
+    if (!doc || !id) return;
+    let el = doc.getElementById(id);
+    if (!el && window.CSS && CSS.escape) el = doc.querySelector('[name="' + CSS.escape(id) + '"]');
+    if (el && el.scrollIntoView) el.scrollIntoView();
+  }
+
+  async function epvLoad(blob, name) {
+    els.epvOpenBtn.disabled = true; els.epvLastBtn.disabled = true;
+    try {
+      await epvOpenBook(blob);
+      els.epvName.dataset.dynamic = "1";
+      els.epvName.textContent = name;
+      els.epvShell.style.display = "flex";
+      els.epvBar.style.display = "flex";
+      epvRenderToc();
+      log(t("epvOpened", { name: name, n: EPV.spine.length, toc: EPV.nav.length }), "ok");
+      await epvShow(0, "");
+    } catch (err) {
+      epvReset();
+      els.epvName.dataset.dynamic = "1";
+      els.epvName.textContent = t("epvNone");
+      log(t("epvFail", { msg: err && err.message ? err.message : String(err) }), "err");
+      console.error(err);
+    }
+    els.epvOpenBtn.disabled = false;
+    els.epvLastBtn.disabled = !LAST_EPUB;
+  }
+
+  els.epvOpenBtn.addEventListener("click", () => els.epvFile.click());
+  els.epvFile.addEventListener("change", async (e) => {
+    const f = (e.target.files || [])[0];
+    if (!f) return;
+    await epvLoad(f, f.name);
+    els.epvFile.value = ""; // 同じファイルを選び直しても change が出るように
+  });
+  els.epvLastBtn.addEventListener("click", () => { if (LAST_EPUB) epvLoad(LAST_EPUB.blob, LAST_EPUB.name); });
+  els.epvPrev.addEventListener("click", () => epvShow(EPV.idx - 1, ""));
+  els.epvNext.addEventListener("click", () => epvShow(EPV.idx + 1, ""));
+  // つまみを動かしている間に描き直すと本1章分の再構築が何度も走るので、離した時だけ描く。
+  els.epvFont.addEventListener("input", () => { els.epvFontVal.textContent = els.epvFont.value + "%"; });
+  els.epvFont.addEventListener("change", () => { if (EPV.idx >= 0) epvShow(EPV.idx, ""); });
+
   function downloadBlob(blob, name) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
