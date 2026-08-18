@@ -788,6 +788,12 @@
       progPackage: "Packaging DOCX…",
       progSvg: "Exporting figure {i}/{n}…",
       progZip: "Zipping…",
+      progReadFiles: "Reading folder {i}/{n} files…",
+      progMerge: "Merging and verifying {n} chapters…",
+      progStage: "Writing to preview…",
+      progStageBuild: "Building preview ({n} figures)…",
+      progStagePrint: "Applying print styles…",
+      progAborted: "Aborted",
       progDone: "Done",
       imgPlaceholder: "[image{alt}]",
       imgFailPlaceholder: "[image could not be embedded{reason}]",
@@ -1076,6 +1082,12 @@
       progPackage: "DOCX をパッケージング中…",
       progSvg: "図を書き出し中 {i}/{n}…",
       progZip: "zip 圧縮中…",
+      progReadFiles: "フォルダを読み込み中 {i}/{n}…",
+      progMerge: "{n} 章を結合して検査中…",
+      progStage: "プレビューへ書き出し中…",
+      progStageBuild: "プレビューを組み立て中（図 {n} 点）…",
+      progStagePrint: "印刷スタイルを適用中…",
+      progAborted: "中止",
       progDone: "完了",
       imgPlaceholder: "[画像{alt}]",
       imgFailPlaceholder: "[画像を埋め込めませんでした{reason}]",
@@ -1364,6 +1376,12 @@
       progPackage: "正在打包 DOCX…",
       progSvg: "正在导出图 {i}/{n}…",
       progZip: "正在压缩 zip…",
+      progReadFiles: "正在读取文件夹 {i}/{n}…",
+      progMerge: "正在合并并检查 {n} 章…",
+      progStage: "正在写入预览…",
+      progStageBuild: "正在构建预览（图 {n} 张）…",
+      progStagePrint: "正在应用打印样式…",
+      progAborted: "已中止",
       progDone: "完成",
       imgPlaceholder: "[图像{alt}]",
       imgFailPlaceholder: "[图像无法嵌入{reason}]",
@@ -1496,6 +1514,11 @@
     els.progBar.style.width = "100%";
     els.progText.textContent = t("progDone") + "  —  " + elapsed() + "s";
     setTimeout(() => { els.progWrap.style.display = "none"; }, 1800);
+  }
+  // 中止したときも同じ経路で畳む。棒が途中の幅で残ると「まだ走っている」に見える。
+  function progFail() {
+    els.progText.textContent = t("progAborted") + "  —  " + elapsed() + "s";
+    setTimeout(() => { els.progWrap.style.display = "none"; }, 2400);
   }
   // 次フレームまで待って進捗描画を反映（重い同期処理の前に呼ぶ）
   function nextFrame() { return new Promise(r => requestAnimationFrame(() => r())); }
@@ -1679,10 +1702,18 @@
     if (!files.length) return;
     try {
       // book/ 直下のみを見る（サブフォルダの同名ファイルを拾わない）
+      progStart();
       const depth = Math.min(...files.map(f => (f.webkitRelativePath || f.name).split("/").length));
       const flat = files.filter(f => (f.webkitRelativePath || f.name).split("/").length === depth);
       const byName = {};
-      for (const f of flat) byName[f.name] = await readExact(f);
+      // 87章・12MB を読む間に一度も描画を譲らないと、画面は止まって見える。1本ごとに
+      // 進捗を書き、譲るのは 80ms に1回だけにする（毎回譲ると描画待ちで1秒以上増える）。
+      let paintedAt = 0;
+      for (let i = 0; i < flat.length; i++) {
+        byName[flat[i].name] = await readExact(flat[i]);
+        progStep(0.4 * ((i + 1) / flat.length), t("progReadFiles", { i: i + 1, n: flat.length }));
+        if (Date.now() - paintedAt > 80) { await nextFrame(); paintedAt = Date.now(); }
+      }
       // 二つの流儀を取り違えないよう、フォルダの中身で分ける。_frame.html /
       // manifest.json があれば htmlbook の join、どちらも無ければ「最初から独立して
       // 書かれた章別HTML」の結合（下の msRun）。片方だけ有るのは壊れた book/ なので、
@@ -1693,6 +1724,8 @@
       if (!hasFrame) throw new Error(t("joinNoFrame"));
       if (!hasManifest) throw new Error(t("joinNoManifest"));
       const man = JSON.parse(byName["manifest.json"]);
+      progStep(0.5, t("progMerge", { n: man.chapters.length }));
+      await nextFrame();
       const { html, deltas } = joinChapters(byName["_frame.html"], man, byName);
 
       // 章が消えていないかは、字数の増減を出して人が見て判断する。
@@ -1713,9 +1746,12 @@
       els.joinName.textContent = name;
       els.fileName.dataset.dynamic = "1";
       els.fileName.textContent = name;
-      loadIntoStage(html, name);
+      progStep(0.9, t("progStage"));
+      await nextFrame();
+      loadIntoStage(html, name, true);
       log(t("joinLoaded"), "ok");
     } catch (err) {
+      progFail();
       log(t("joinFail", { msg: err.message }), "err");
     } finally {
       e.target.value = "";
@@ -2157,12 +2193,19 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
   async function msRun(byName) {
     if (!MS_SPEC) throw new Error(t("msNeedSpec"));
     log(t("msMode"));
+    progStep(0.42, t("progPrep"));
+    await nextFrame();
     // Python の universal newlines に合わせて LF へ揃える（章別HTMLは CRLF と LF が
     // 混ざっている）。揃えないと同じ原稿から出た二つの出力が改行だけで食い違う。
     const norm = {};
     for (const k of Object.keys(byName)) norm[k] = byName[k].replace(/\r\n?/g, "\n");
     const tocOn = els.msTocEnable.checked;
     const tocAt = els.msTocPos.value;
+    // msMerge は結合と検査を続けて走る同期処理なので、途中では譲れない。
+    // 何章を相手に何をしているかだけ先に出してから入る。
+    const msUnits = MS_SPEC.parts.reduce((a, p) => a + p.units.length, 0);
+    progStep(0.5, t("progMerge", { n: msUnits }));
+    await nextFrame();
     const r = msMerge(MS_SPEC, norm, { toc: tocOn, tocAt: tocAt });
     log(t("msOk", { n: r.order.length, chars: cpLength(r.html) }), "ok");
     log(tocOn
@@ -2181,7 +2224,9 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
     els.joinName.textContent = name;
     els.fileName.dataset.dynamic = "1";
     els.fileName.textContent = name;
-    loadIntoStage(r.html, name);
+    progStep(0.9, t("progStage"));
+    await nextFrame();
+    loadIntoStage(r.html, name, true);
     log(t("joinLoaded"), "ok");
   }
 
@@ -2520,31 +2565,36 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
     await hbWriteZip(files, t("splitZipNote"));
   });
 
-  function loadIntoStage(html, name) {
+  // withProg を渡すと段ごとに進捗を出す（結合タブ用）。8MB・図1842点の本では
+  // ここが全体の9割の時間を占める。1段のままだと「90%で固まった」に見えるので、
+  // 重い処理の前に必ず描画を譲ってから入る。await しない呼び出し方も従来どおり動く。
+  async function loadIntoStage(html, name, withProg) {
     const doc = els.stage.contentDocument;
     doc.open();
     doc.write(html);
     doc.close();
-    setTimeout(() => {
-      const body = doc.body || doc.documentElement;
-      const imgs = body.querySelectorAll("img").length;
-      const svgs = body.querySelectorAll("svg").length;
-      els.fileInfo.dataset.dynamic = "1";
-      els.fileInfo.textContent = t("fileInfo", { name, img: imgs, svg: svgs });
-      els.preview.innerHTML = "";
-      const clone = body.cloneNode(true);
-      clone.querySelectorAll("script").forEach(s => s.remove());
-      els.preview.appendChild(clone);
-      loaded = true;
-      fillHeadingPickers(body);
-      els.btnDocx.disabled = false;
-      els.btnEpub.disabled = false;
-      els.btnSvg.disabled = svgs === 0;
-      if (svgs === 0) log(t("noSvgExport"), "warn");
-      log(t("loadDone", { name, img: imgs, svg: svgs }), "ok");
-      const pn = setPrintMode(els.printMode.checked);
-      if (pn) log(t("printApplied", { n: pn }));
-    }, 60);
+    await new Promise(r => setTimeout(r, 60));   // iframe が書いた HTML を解析し終わるのを待つ
+    const body = doc.body || doc.documentElement;
+    const imgs = body.querySelectorAll("img").length;
+    const svgs = body.querySelectorAll("svg").length;
+    els.fileInfo.dataset.dynamic = "1";
+    els.fileInfo.textContent = t("fileInfo", { name, img: imgs, svg: svgs });
+    if (withProg) { progStep(0.93, t("progStageBuild", { n: svgs })); await nextFrame(); }
+    els.preview.innerHTML = "";
+    const clone = body.cloneNode(true);
+    clone.querySelectorAll("script").forEach(s => s.remove());
+    els.preview.appendChild(clone);
+    loaded = true;
+    fillHeadingPickers(body);
+    els.btnDocx.disabled = false;
+    els.btnEpub.disabled = false;
+    els.btnSvg.disabled = svgs === 0;
+    if (svgs === 0) log(t("noSvgExport"), "warn");
+    log(t("loadDone", { name, img: imgs, svg: svgs }), "ok");
+    if (withProg) { progStep(0.97, t("progStagePrint")); await nextFrame(); }
+    const pn = setPrintMode(els.printMode.checked);
+    if (pn) log(t("printApplied", { n: pn }));
+    if (withProg) progEnd();
   }
 
   // ページの @media print ルールを screen にも常時適用し、getComputedStyle が
