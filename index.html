@@ -703,6 +703,7 @@
       epubTocPageAdded: "EPUB TOC page: {n} entries, placed in front of \"{where}\".",
       epubTocPageTop: "the very front",
       epubTocPageEmpty: "EPUB TOC page: no heading matched h{from}-h{to}, so no page was added.",
+      epubTocPageSplit: "EPUB TOC page: \"{h}\" sits inside a chapter file, so that file was split there and the TOC page went right in front of it.",
       epubTocPageNoMatch: "EPUB TOC page: the chosen heading \"{h}\" is not where a chapter file starts, so the TOC went in front of the chapter that contains it.",
       epubTocPageLost: "EPUB TOC page: the chosen heading \"{h}\" is gone from the book (dropped by the exclude selector?). It was placed at the very front instead.",
       epubExcludeNote: "(On-screen UI — toolbars, print buttons, nav bars — is not part of the book. Anything your print styles hide is dropped automatically; add selectors here for UI that stays visible when printing. Scripts and form controls are always dropped.)",
@@ -998,6 +999,7 @@
       epubTocPageAdded: "EPUB の目次ページ: {n} 項目を「{where}」の手前に入れました。",
       epubTocPageTop: "いちばん先頭",
       epubTocPageEmpty: "EPUB の目次ページ: h{from}-h{to} に該当する見出しが無いため、入れていません。",
+      epubTocPageSplit: "EPUB の目次ページ: 「{h}」は章ファイルの途中にあるため、そこで章ファイルを切って、その手前に入れました。",
       epubTocPageNoMatch: "EPUB の目次ページ: 選んだ見出し「{h}」は章ファイルの先頭ではないため、それを含む章の手前に入れました。",
       epubTocPageLost: "EPUB の目次ページ: 選んだ見出し「{h}」が本文に見つかりません（除外セレクタで落ちた可能性）。先頭に入れました。",
       epubExcludeNote: "（ツールバー・印刷ボタン・ナビなどの画面用 UI は本の中身ではありません。印刷スタイルで隠れる要素は自動で落とします。印刷しても見えたままの UI はここにセレクタを足してください。スクリプトとフォーム部品は常に落とします）",
@@ -1292,6 +1294,7 @@
       epubTocPageAdded: "EPUB 目录页：已加入 {n} 个条目，位置在「{where}」之前。",
       epubTocPageTop: "最前面",
       epubTocPageEmpty: "EPUB 目录页：没有符合 h{from}-h{to} 的标题，未加入。",
+      epubTocPageSplit: "EPUB 目录页：「{h}」位于章节文件中间，已在该处切分章节文件，并把目录页放在它前面。",
       epubTocPageNoMatch: "EPUB 目录页：所选标题「{h}」不是章节文件的开头，已插入到包含它的章节之前。",
       epubTocPageLost: "EPUB 目录页：书中找不到所选标题「{h}」（可能被排除选择器剔除），已改为放在最前面。",
       epubExcludeNote: "（工具栏、打印按钮、导航栏等屏幕 UI 不属于书籍内容。被打印样式隐藏的元素会自动剔除；若某些 UI 在打印时仍可见，请在此添加选择器。脚本与表单控件始终剔除）",
@@ -3010,6 +3013,15 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
     const level = pickSplitLevel(work);
     const chapters = splitChapters(work, level);
     if (level) log(t("epubSplitPicked", { lv: level, n: chapters.length }));
+
+    // 目次ページの位置は nav を組む前に解く。章の途中の見出しを選ばれたら、そこで
+    // 章ファイルを切ってから nav を作らないと、飛び先のファイル名が古いままになる。
+    const tocPageOn = els.epubTocPage.checked && heads.some(h => {
+      const lv = HEADING[h.tagName];
+      return lv >= from && lv <= to && (h.textContent || "").trim();
+    });
+    const tocPos = tocPageOn ? tocPageIndex(chapters, els.epubTocPagePos.value) : null;
+
     const nav = [];
     for (const ch of chapters) {
       for (const h of ch.el.querySelectorAll("h1,h2,h3,h4,h5,h6")) {
@@ -3027,14 +3039,13 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
     // nav をそのまま使うので、飛び先は必ず chNNN.xhtml#id の形になり、章ファイルを
     // またいでも壊れない（本文内の #id だけのリンクは分割後に飛べなくなる）。
     if (els.epubTocPage.checked) {
-      if (!nav.length) {
+      if (!tocPageOn) {
         log(t("epubTocPageEmpty", { from: from, to: to }), "warn");
       } else {
-        const pos = tocPageIndex(chapters, els.epubTocPagePos.value);
         // 疑似的な1章として差し込む。manifest も spine も chapters の並びから
         // 作られるので、ここに入れておけば他は何も変えなくてよい。
-        chapters.splice(pos.at, 0, { file: "toc-page.xhtml", el: tocPageEl(nav, work.ownerDocument) });
-        log(t("epubTocPageAdded", { n: nav.length, where: pos.label }), "ok");
+        chapters.splice(tocPos.at, 0, { file: "toc-page.xhtml", el: tocPageEl(nav, work.ownerDocument) });
+        log(t("epubTocPageAdded", { n: nav.length, where: tocPos.label }), "ok");
       }
     }
 
@@ -3142,12 +3153,14 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
     return work.querySelector("h2") ? 2 : 0;
   }
 
+  function chapterFile(n) { return "ch" + String(n).padStart(3, "0") + ".xhtml"; }
+
   // 指定レベルの見出しで章へ切る。見出しが section 等に包まれている本もあるので、
   // 「見出しを含むトップレベル要素」を境界にする。入れ子構造は壊さずそのまま運ぶ。
   function splitChapters(work, level) {
     const doc = work.ownerDocument;
     const kids = [...work.childNodes];
-    const mk = n => ({ file: "ch" + String(n).padStart(3, "0") + ".xhtml", el: doc.createElement("div") });
+    const mk = n => ({ file: chapterFile(n), el: doc.createElement("div") });
     if (!level) {
       const only = mk(1);
       kids.forEach(n => only.el.appendChild(n.cloneNode(true)));
@@ -3245,6 +3258,10 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
   // 選ばれた見出しが、どの章ファイルの手前かを解く。
   // 章は splitChapters が作った DOM の複製なので、要素の同一性では辿れない。
   // 文言と「何番目か」で照合する。
+  // 選ばれた見出しが章ファイルの途中にあるときは、そこで章ファイルを切って本当に
+  // その手前へ入れる。切らないと「それを含む章の先頭」まで目次がずり上がる
+  // （実測: h1 が8個ある本は h1 分割になり、前付けの h1「はじめに」の中にある
+  //  h2「第1章 航海図の読み方」を選ぶと、目次が「はじめに」の手前へ出た）。
   function tocPageIndex(chapters, choice) {
     if (!choice || choice === "top") return { at: 0, label: t("epubTocPageTop") };
     const m = /^h:(\d+):([\s\S]*)$/.exec(choice);
@@ -3252,19 +3269,57 @@ div.buildnote ul{margin:8px 0 0; padding-left:1.3em}
     const want = m[2];
     let nth = Number(m[1]);
     for (let i = 0; i < chapters.length; i++) {
-      const hs = [...chapters[i].el.querySelectorAll("h1,h2")].map(headingLabel);
-      const hit = hs.findIndex(h => h.text === want);
-      if (hit < 0) continue;
+      const hs = [...chapters[i].el.querySelectorAll("h1,h2")];
       // この章に同じ文言が複数あることもあるので、数えながら進む。
-      const count = hs.filter(h => h.text === want).length;
-      if (nth > count) { nth -= count; continue; }
-      // 章の先頭見出しでなければ、章の途中に目次を割り込ませることになる。
-      // ファイルは切れないので、その章の手前に置いたうえで理由を言う。
-      if (hs[0].text !== want || nth !== 1) log(t("epubTocPageNoMatch", { h: want }), "warn");
-      return { at: i, label: want };
+      const hits = hs.filter(h => headingLabel(h).text === want);
+      if (!hits.length) continue;
+      if (nth > hits.length) { nth -= hits.length; continue; }
+      const hEl = hits[nth - 1];
+      // 章の先頭見出しなら、章ファイルの境界がそのまま目次の位置になる。
+      if (hEl === hs[0]) return { at: i, label: want };
+      const tail = splitChapterBefore(chapters[i], hEl);
+      if (!tail) { log(t("epubTocPageNoMatch", { h: want }), "warn"); return { at: i, label: want }; }
+      chapters.splice(i + 1, 0, tail);
+      // 章が1つ増えたのでファイル名を振り直す。nav はこの後に組むので、飛び先は揃う。
+      chapters.forEach((c, k) => { c.file = chapterFile(k + 1); });
+      log(t("epubTocPageSplit", { h: want }));
+      return { at: i + 1, label: want };
     }
     log(t("epubTocPageLost", { h: want }), "warn");
     return { at: 0, label: t("epubTocPageTop") };
+  }
+
+  // 章ファイルを、その中の見出し hEl の手前で2つに切る。
+  // hEl が section 等に包まれていても切れるよう、章の根から hEl までの道を辿り、
+  // 途中の要素は殻（属性だけで中身なし）を後半側に立て直してから中身を移す。
+  // 前半は ch.el をその場で削って作り、返り値は後半の章オブジェクト。
+  function splitChapterBefore(ch, hEl) {
+    const path = [];
+    for (let n = hEl; n && n !== ch.el; n = n.parentNode) path.unshift(n);
+    if (!path.length || path[0].parentNode !== ch.el) return null;
+    const tailEl = ch.el.cloneNode(false);
+    let dst = tailEl;
+    for (let i = 0; i < path.length; i++) {
+      const n = path[i];
+      const last = i === path.length - 1;
+      let shell = null;
+      if (!last) {
+        shell = n.cloneNode(false);
+        // id は前半に残す。同じ id が2つのファイルに出ると飛び先が壊れる。
+        shell.removeAttribute("id");
+        dst.appendChild(shell);
+      }
+      // 最下層は見出しそのものから、途中の層は n の次の兄弟から、末尾まで移す。
+      let m = last ? n : n.nextSibling;
+      while (m) { const next = m.nextSibling; dst.appendChild(m); m = next; }
+      if (!last) dst = shell;
+    }
+    // 中身が丸ごと後半へ移って空になった殻は、前半側から畳む。
+    for (let i = path.length - 2; i >= 0; i--) {
+      const n = path[i];
+      if (!n.childNodes.length && n.parentNode) n.parentNode.removeChild(n);
+    }
+    return { file: ch.file, el: tailEl };
   }
 
   // 読み順に入る目次ページ（本文側）。nav.xhtml が Kindle の「移動」に出る論理目次で、
